@@ -1,0 +1,62 @@
+{
+    "dashboard": {
+        "states": [],
+        "actions": []
+    },
+    "detailView": [
+        {
+            "label": "{{i18n.label}}",
+            "displayType": "list",
+            "list": {
+                "command": {
+                    "name": "setDeviceType",
+                    "alternatives": [
+                        {
+                            "key": "Switch",
+                            "value": "Switch",
+                            "type": "active"
+                        },
+                        {
+                            "key": "Contact",
+                            "value": "Contact Sensor",
+                            "type": "active"
+                        },
+                        {
+                            "key": "Motion",
+                            "value": "Motion Sensor",
+                            "type": "active"
+                        }
+                    ],
+                    "argumentType": "string"
+                },
+                "state": {
+                    "value": "deviceType.value",
+                    "valueType": "string",
+                    "alternatives": [
+                        {
+                            "key": "Switch",
+                            "value": "Switch",
+                            "type": "active"
+                        },
+                        {
+                            "key": "Contact",
+                            "value": "Contact Sensor",
+                            "type": "active"
+                        },
+                        {
+                            "key": "Motion",
+                            "value": "Motion Sensor",
+                            "type": "active"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "automation": {
+        "conditions": [],
+        "actions": []
+    },
+    "id": "partyvoice23922.createmqttdev",
+    "version": 1
+}
