@@ -523,12 +523,13 @@ local function handle_switch(driver, device, command)
       end
 
       if payload then
+        local qos = tonumber(device.preferences.qos:match('qos(%d)$'))
         assert(client:publish{
 					topic = device.preferences.pubtopic,
 					payload = payload,
-					qos = tonumber(device.preferences.qos:match('qos(%d)$'))
+					qos = qos
 				})
-        log.debug (string.format('Message "%s" published to topic %s with qos=%d', device.preferences.pubtopic, payload, device.preferences.qos))
+        log.debug (string.format('Message "%s" published to topic %s with qos=%d', device.preferences.pubtopic, payload, qos))
       
       end
     end
