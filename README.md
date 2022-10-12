@@ -7,7 +7,7 @@ Switch and button devices can also be configured to publish MQTT messages when s
 
 ## Use Cases
 If you have a device or application that publishes messages using MQTT, then you can use this driver to easily integrate into SmartThings.  
-If you have a device or application that responds to messages from MQTT, then you can use this driver to initiate MQTT messages from supported device types such as switchs or momentary buttons.
+If you have a device or application that responds to messages from MQTT, then you can use this driver to initiate MQTT messages from supported SmartThings device types such as switches or momentary buttons.
 
 ## Pre-requisites
 * SmartThings Hub
