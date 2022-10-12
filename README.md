@@ -46,4 +46,4 @@ Once the device is successfully subscribed to the broker, the status field on th
 * Refresh buttons need only be used to force re-connection or re-subscribe in the event of a problem
 * Unique broker per device is not supported
 * Momentary button devices support 4 types of received messages: button pressed, double-push, triple-push, and button held
-* Values published: For switch, the respective ON/OFF values configured in Settings are sent; for Button the button PRESSED value configured in Settings is sent
+* Values published: For Switch, the respective ON/OFF values configured in Settings are sent; for Button the button PRESSED value configured in Settings is sent
