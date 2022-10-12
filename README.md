@@ -11,7 +11,7 @@ If you have a device or application that responds to messages from MQTT, then yo
 
 ## Pre-requisites
 * SmartThings Hub
-* MQTT broker such as Mosquitto
+* MQTT broker such as [Mosquitto](https://mosquitto.org/)
 
 ## Installation / Configuration
 Install driver using this channel invite link.  Enroll your hub and choose "MQTT Devices V1" from the list of drivers to install.
