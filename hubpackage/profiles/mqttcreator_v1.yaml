@@ -1,6 +1,7 @@
 name: mqttcreator.v1
 components:
   - id: main
+    label: Creatorv1
     capabilities:
       - id: partyvoice23922.createmqttdev
         version: 1

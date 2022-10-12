@@ -21,7 +21,7 @@ preferences:
       minLength: 6
       maxLength: 32
       default: "xxxxx/xxxxx"
-  - title: "MQTT Message Format"
+  - title: "Expected Message Format"
     name: format
     description: "Select type"
     required: true
@@ -30,7 +30,7 @@ preferences:
       options:
         json: "JSON"
         string: "String"
-      default: json
+      default: string
   - title: "JSON Key"
     name: jsonelement
     description: "Data element"
@@ -43,21 +43,21 @@ preferences:
       default: "Contact.Action"
   - title: "Contact OPEN Value"
     name: contactopen
-    description: "Data value for OPEN"
+    description: "Msg value for OPEN"
     required: true
     preferenceType: string
     definition:
       stringType: text
       minLength: 1
       maxLength: 10
-      default: "OPEN"
+      default: "open"
   - title: "Contact CLOSED Value"
     name: contactclosed
-    description: "Data value for CLOSED"
+    description: "Msg value for CLOSED"
     required: true
     preferenceType: string
     definition:
       stringType: text
       minLength: 1
       maxLength: 10
-      default: "CLOSED"
+      default: "closed"
