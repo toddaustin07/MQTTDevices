@@ -3,7 +3,7 @@ SmartThings Edge driver for creating MQTT-connected devices.  These devices will
 
 Currently supported device types:  switch, button, contact, motion.  More can be added - just ask!
 
-Switch and button devices can also be configured to publish MQTT messages when state changes from within SmartThings (manually via mobile app or automations).
+Switch and button devices can also be configured to publish MQTT messages when state changes from within SmartThings (i.e., manually via mobile app or automations).
 
 ## Pre-requisites
 * SmartThings Hub
