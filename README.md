@@ -38,11 +38,12 @@ Once a device is created using the master device, go to the respective device Se
 Once the device is successfully subscribed to the broker, the status field on the device Controls screen will show 'Subscribed' and the list shown in the master device will be updated with the topic.
 
 ### Additional notes
+* All device state changes are available for automations
 * Multiple devices can be subscribed to the same topic
 * Changes to broker authentication or IP will result in automatic reconnect
 * Changes to device subscribe topic will result in prior topic automatically being unsubscribed and the new topic subscribed-to
 * Monitor the status fields on the device Controls screens to confirm connection & subscription status
 * Refresh buttons need only be used to force re-connection or re-subscribe in the event of a problem
 * Unique broker per device is not supported
-* Momentary button supports 4 types of triggers: button push, double-push, triple-push, and button hold
+* Momentary button devices support 4 types of received messages: button pressed, double-push, triple-push, and button held
 * Values published: For switch, the respective ON/OFF values configured in Settings are sent; for Button the button PRESSED value configured in Settings is sent
