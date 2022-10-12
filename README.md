@@ -36,7 +36,7 @@ Once the device is successfully subscribed to the broker, the status field on th
 ### Additional notes
 * Multiple devices can be subscribed to the same topic
 * Changes to broker authentication or IP will result in automatic reconnect
-* Changes to device subscribe topic will result in prior topic automatically being unsubscribed and new topic subscribe
-* Monitor status fields to confirm connection & subscription status
-* Refresh buttons need only be used to force re-connection or re-subscribe
+* Changes to device subscribe topic will result in prior topic automatically being unsubscribed and the new topic subscribed-to
+* Monitor the status fields on the device Controls screens to confirm connection & subscription status
+* Refresh buttons need only be used to force re-connection or re-subscribe in the event of a problem
 * Unique broker per device is not supported
