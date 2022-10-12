@@ -22,7 +22,7 @@ Once available on your hub, use the SmartThings mobile app to initiate an *Add d
 ### MQTT Device Creator device
 This 'master' device is used to create the desired device types (e.g. switch, button, contact, motion).  Simply go to the Controls screen and tap the top button labeled 'Select & Create MQTT Device'.  Choose the device type and a new device will be created and found in the 'No room assigned' room.
 
-The MQTT Device Creator will also display a list of the MQTT topics that are currently subscribed to.
+The MQTT Device Creator will also display a list of the MQTT topics that are currently subscribed to across all created devices.
 
 ### Configuration of created MQTT devices (switch, button, contact, motion)
 Once a device is created using the master device, go to the respective device Settings screen to configure the MQTT topic for the device to respond to, as well as other optional preferences:
