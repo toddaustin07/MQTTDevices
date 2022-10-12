@@ -30,7 +30,7 @@ Once a device is created using the master device, go to the respective device Se
 * **Subscribe Topic**: MQTT topic in the form of xxxx/xxxx that this device will respond to
 * **Expected Message format**: Select *string* if MQTT message data format is a simple string, or *json* if the message data format is json formatted
 * **JSON Key**: If message format is json, then provide the element key containing the value to be inspected
-* **Values**: set of expected values to be received representing each of the valid states for the device type
+* **Values**: set of expected values to be received representing each of the valid states for the device type; note this is case sensitive
 * **Publish xxxx State Changes**: Enable to have state changes published when a switch or button state is activated from within SmartThings
 * **Publish Topic**: If publish state changes is enabled, then provide here the MQTT topic to publish the state change to
 * **Publish QoS**: Select 0, 1, or 2 for the MQTT Quality of Service (QoS) level to use when publishing the state change
