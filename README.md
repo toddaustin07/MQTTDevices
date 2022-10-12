@@ -14,7 +14,7 @@ If you have a device or application that responds to messages from MQTT, then yo
 * MQTT broker such as [Mosquitto](https://mosquitto.org/)
 
 ## Installation / Configuration
-Install driver using this channel invite link.  Enroll your hub and choose "MQTT Devices V1" from the list of drivers to install.
+Install driver using [this channel invite link](https://bestow-regional.api.smartthings.com/invite/Q1jP7BqnNNlL).  Enroll your hub and choose "MQTT Devices V1" from the list of drivers to install.
 
 Once available on your hub, use the SmartThings mobile app to initiate an *Add device / Scan for nearby devices*. A new device called 'MQTT Device Creator' will be found in your 'No room assigned' room.  Open the device and go to the device Settings menu (3 vertical dot menu in upper right corner of Controls tab).  Provide the username and password (if required) for your MQTT broker, and the IP address of the MQTT broker.  Return to the Controls screen and the Status field there will indicate if the driver is now connected to the MQTT broker.
 
