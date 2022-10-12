@@ -45,3 +45,4 @@ Once the device is successfully subscribed to the broker, the status field on th
 * Refresh buttons need only be used to force re-connection or re-subscribe in the event of a problem
 * Unique broker per device is not supported
 * Momentary button supports 4 types of triggers: button push, double-push, triple-push, and button hold
+* Values published: For switch, the respective ON/OFF values configured in Settings are sent; for Button the button PRESSED value configured in Settings is sent
