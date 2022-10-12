@@ -1,9 +1,13 @@
 # MQTTDevices
-SmartThings Edge driver for creating MQTT-connected devices.  These devices will update their states based on MQTT messages.
+SmartThings Edge driver for creating MQTT-connected devices.  These devices will update their states based on MQTT messages.  No cloud connection is used, so everything is executed locally.
 
 Currently supported device types:  switch, button, contact, motion.  More can be added - just ask!
 
 Switch and button devices can also be configured to publish MQTT messages when state changes from within SmartThings (i.e., manually via mobile app or automations).
+
+## Use Cases
+If you have a device or application that publishes messages using MQTT, then you can use this driver to easily integrate into SmartThings.  
+If you have a device or application that responds to messages from MQTT, then you can use this driver to initiate MQTT messages from supported device types such as switchs or momentary buttons.
 
 ## Pre-requisites
 * SmartThings Hub
@@ -40,3 +44,4 @@ Once the device is successfully subscribed to the broker, the status field on th
 * Monitor the status fields on the device Controls screens to confirm connection & subscription status
 * Refresh buttons need only be used to force re-connection or re-subscribe in the event of a problem
 * Unique broker per device is not supported
+* Momentary button supports 4 types of triggers: button push, double-push, triple-push, and button hold
