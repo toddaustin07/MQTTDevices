@@ -21,7 +21,7 @@ This 'master' device is used to create the desired device types (e.g. switch, bu
 The MQTT Device Creator will also display a list of the MQTT topics that are currently subscribed to.
 
 ### Configuration of created MQTT devices (switch, button, contact, motion)
-Once a device is created using the master device, go to the device Settings screen to configure the MQTT topic for the device to respond to, as well as other optional preferences.
+Once a device is created using the master device, go to the respective device Settings screen to configure the MQTT topic for the device to respond to, as well as other optional preferences:
 
 * **Subscribe Topic**: MQTT topic in the form of xxxx/xxxx that this device will respond to
 * **Expected Message format**: Select *string* if MQTT message data format is a simple string, or *json* if the message data format is json formatted
