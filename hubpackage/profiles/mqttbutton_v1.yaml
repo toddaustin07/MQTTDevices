@@ -23,8 +23,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 6
-      maxLength: 32
       default: "xxxxx/xxxxx"
   - title: "Expected Message Format"
     name: format
@@ -100,8 +98,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 6
-      maxLength: 32
       default: "xxxxx/xxxxx"
   - title: "Publish QoS"
     name: qos

@@ -45,7 +45,7 @@ local clearcreatemsg_timer
 
 
 -- Custom Capabilities
-local cap_createdev = capabilities["partyvoice23922.createmqttdev"]
+local cap_createdev = capabilities["partyvoice23922.createmqttdev1"]
 local cap_status = capabilities["partyvoice23922.status"]
 local cap_topiclist = capabilities["partyvoice23922.topiclist"]
 local cap_refresh = capabilities["partyvoice23922.refresh"]
@@ -56,6 +56,8 @@ local typemeta =  {
                     ['Button']     = { ['profile'] = 'mqttbutton.v1',        ['created'] = 0, ['switch'] = false },
                     ['Contact']    = { ['profile'] = 'mqttcontact.v1',       ['created'] = 0, ['switch'] = false },
                     ['Motion']     = { ['profile'] = 'mqttmotion.v1',        ['created'] = 0, ['switch'] = false },
+                    ['Alarm']      = { ['profile'] = 'mqttalarm.v1',         ['created'] = 0, ['switch'] = false },
+                    ['Dimmer']     = { ['profile'] = 'mqttdimmer.v1',        ['created'] = 0, ['switch'] = false },
                   }
 
 local function build_html(list)
@@ -144,21 +146,6 @@ local function get_element_value(inputjson, key)
 
 end
 
-local function disptable(table, tab, maxlevels, currlevel)
-
-	if not currlevel then; currlevel = 0; end
-  currlevel = currlevel + 1
-  for key, value in pairs(table) do
-    if type(key) ~= 'table' then
-      log.debug (tab .. '  ' .. key, value)
-    else
-      log.debug (tab .. '  ', key, value)
-    end
-    if (type(value) == 'table') and (currlevel < maxlevels) then
-      disptable(value, '  ' .. tab, maxlevels, currlevel)
-    end
-  end
-end
 
 local function determine_devices(targettopic)
 
@@ -187,7 +174,7 @@ local function process_message(topic, msg)
   log.debug (string.format("\tFrom topic: %s", topic))
 
   local devicelist = determine_devices(topic)
-  log.debug ('# device matches:', #devicelist)
+  log.debug ('# device matches for topic:', #devicelist)
 
   if #devicelist > 0 then
 
@@ -257,6 +244,30 @@ local function process_message(topic, msg)
             device:emit_event(capabilities.motionSensor.motion.inactive())
           else
             log.warn ('Unconfigured motion value received')
+          end
+          
+        elseif dtype == 'Alarm' then
+          if value == device.preferences.alarmoff then
+            device:emit_event(capabilities.alarm.alarm.off())
+          elseif value == device.preferences.alarmsiren then
+            device:emit_event(capabilities.alarm.alarm.siren())
+          elseif value == device.preferences.alarmstrobe then
+            device:emit_event(capabilities.alarm.alarm.strobe())
+          elseif value == device.preferences.alarmboth then
+            device:emit_event(capabilities.alarm.alarm.both())
+          else
+            log.warn ('Unconfigured alarm value received')
+          end
+          
+        elseif dtype == 'Dimmer' then
+          local numvalue = tonumber(value)
+          if numvalue then
+            log.debug ('Dimmer value received:', numvalue)
+            if numvalue < 0 then; numvalue = 0; end
+            if numvalue > 100 then; numvalue = 100; end
+            device:emit_event(capabilities.switchLevel.level(numvalue))
+          else
+            log.warn('Invalid dimmer value received (NaN)');
           end
         end
       end
@@ -511,7 +522,7 @@ local function publish_message(device, payload)
       payload = payload,
       qos = qos
     })
-    log.debug (string.format('Message "%s" published to topic %s with qos=%d', device.preferences.pubtopic, payload, qos))
+    log.debug (string.format('Message "%s" published to topic %s with qos=%d', payload, device.preferences.pubtopic, qos))
     
   end
 
@@ -575,7 +586,42 @@ local function handle_button(driver, device, command)
     publish_message(device, device.preferences.butpush)
       
   end
-end  
+end
+
+local function handle_alarm(driver, device, command)
+
+  log.info ('Alarm triggered:', command.command)
+  
+  device:emit_event(capabilities.alarm.alarm(command.command))
+
+  if device.preferences.publish == true then
+    
+    local payload
+    
+    local cmdmap = {
+                      ['off'] = device.preferences.alarmoff,
+                      ['siren'] = device.preferences.alarmsiren,
+                      ['strobe'] = device.preferences.alarmstrobe,
+                      ['both'] = device.preferences.alarmboth,
+                   }
+                   
+    publish_message(device, cmdmap[command.command])
+
+  end
+end
+
+local function handle_dimmer(driver, device, command)
+
+  log.info ('Dimmmer value changed to ', command.args.level)
+  
+  device:emit_event(capabilities.switchLevel.level(command.args.level))
+  
+  if device.preferences.publish == true then
+    
+    publish_message(device, tostring(command.args.level))
+    
+  end
+end
       
 ------------------------------------------------------------------------
 --                REQUIRED EDGE DRIVER HANDLERS
@@ -588,7 +634,7 @@ local function device_init(driver, device)
   
   if device.device_network_id:find('Master', 1, 'plaintext') then
   
-    device:try_update_metadata({profile='mqttcreator.v1'})              -- *** REMOVE IN NEXT UPDATE ***
+    device:try_update_metadata({profile='mqttcreator.v2'})              -- *** REMOVE IN NEXT UPDATE ***
     creator_device = device
     device:emit_event(cap_createdev.deviceType(' ', { visibility = { displayed = false } }))
     device:emit_event(cap_status.status('Not Connected'))
@@ -615,6 +661,8 @@ local function device_added (driver, device)
 
     if dtype == 'Switch' then
       device:emit_event(capabilities.switch.switch('off'))
+    elseif dtype == 'Dimmer' then
+      device:emit_event(capabilities.switchLevel.level(0))
     elseif dtype == 'Contact' then
       device:emit_event(capabilities.contactSensor.contact('closed'))
     elseif dtype == 'Motion' then
@@ -627,6 +675,8 @@ local function device_added (driver, device)
                                   capabilities.button.button.pushed_3x.NAME,
                                 }
       device:emit_event(capabilities.button.supportedButtonValues(supported_values))
+    elseif dtype == 'Alarm' then
+      device:emit_event(capabilities.alarm.alarm('off'))
     end
 
     creator_device:emit_event(cap_createdev.deviceType('Device created'))
@@ -660,6 +710,10 @@ local function device_removed(driver, device)
       unsubscribe(id, topic, true)
     end
   else
+    if client then
+      client:disconnect()
+      unsubscribe_all()
+    end
     initialized = false
   end
 
@@ -755,7 +809,7 @@ local function discovery_handler(driver, _, should_continue)
     local MODEL = 'MQTTCreatorV1'
     local VEND_LABEL = 'MQTT Device Creator V1' --update; change for testing
     local ID = 'MQTTDev_Masterv1'               --change for testing
-    local PROFILE = 'mqttcreator.v1'            --update; change for testing
+    local PROFILE = 'mqttcreator.v2'            --update; change for testing
 
     -- Create master creator device
 
@@ -807,9 +861,18 @@ thisDriver = Driver("MQTT Devices", {
     [capabilities.momentary.ID] = {
       [capabilities.momentary.commands.push.NAME] = handle_button,
     },
+    [capabilities.alarm.ID] = {
+      [capabilities.alarm.commands.off.NAME] = handle_alarm,
+      [capabilities.alarm.commands.siren.NAME] = handle_alarm,
+      [capabilities.alarm.commands.strobe.NAME] = handle_alarm,
+      [capabilities.alarm.commands.both.NAME] = handle_alarm,
+    },
+    [capabilities.switchLevel.ID] = {
+      [capabilities.switchLevel.commands.setLevel.NAME] = handle_dimmer,
+    },
   }
 })
 
-log.info ('MQTT Device Driver V1 Started')
+log.info ('MQTT Device Driver V1.1 Started')
 
 thisDriver:run()

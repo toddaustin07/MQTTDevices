@@ -1,15 +1,17 @@
-name: mqttswitch.v1
+name: mqttalarm.v1
 components:
   - id: main
     capabilities:
-      - id: switch
+      - id: alarm
         version: 1
       - id: partyvoice23922.status
         version: 1
       - id: partyvoice23922.refresh
         version: 1
     categories:
-      - name: Switch
+      - name: Siren
+metadata:
+  ocfDeviceType: x.com.st.d.siren
 preferences:
   - title: "Subscribe Topic"
     name: subTopic
@@ -39,18 +41,8 @@ preferences:
       minLength: 2
       maxLength: 64
       default: "Switch.Action"
-  - title: "Switch ON Value"
-    name: switchon
-    description: "Msg value for ON"
-    required: true
-    preferenceType: string
-    definition:
-      stringType: text
-      minLength: 1
-      maxLength: 10
-      default: "on"
-  - title: "Switch OFF Value"
-    name: switchoff
+  - title: "Alarm OFF Value"
+    name: alarmoff
     description: "Msg value for OFF"
     required: true
     preferenceType: string
@@ -59,7 +51,37 @@ preferences:
       minLength: 1
       maxLength: 10
       default: "off"
-  - title: "Publish Switch State Changes"
+  - title: "Alarm Siren Value"
+    name: alarmsiren
+    description: "Msg value for SIREN"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      minLength: 1
+      maxLength: 10
+      default: "siren"
+  - title: "Alarm Strobe Value"
+    name: alarmstrobe
+    description: "Msg value for STROBE"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      minLength: 1
+      maxLength: 10
+      default: "strobe"
+  - title: "Alarm Siren+Strobe Value"
+    name: alarmboth
+    description: "Msg value for SIREN+STROBE"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      minLength: 1
+      maxLength: 10
+      default: "both"
+  - title: "Publish Alarm State Changes"
     name: publish
     description: "Enable/Disable"
     required: true

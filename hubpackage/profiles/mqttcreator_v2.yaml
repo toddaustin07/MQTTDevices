@@ -1,9 +1,9 @@
-name: mqttcreator.v1
+name: mqttcreator.v2
 components:
   - id: main
-    label: Creatorv1
+    label: Creatorv1.1
     capabilities:
-      - id: partyvoice23922.createmqttdev
+      - id: partyvoice23922.createmqttdev1
         version: 1
       - id: partyvoice23922.status
         version: 1
@@ -41,6 +41,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 10
+      minLength: 7
       maxLength: 15
       default: "192.168.1.xxx"
