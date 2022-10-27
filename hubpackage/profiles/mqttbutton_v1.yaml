@@ -41,8 +41,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 2
-      maxLength: 64
       default: "Switch.Action"
   - title: "Button PRESSED Value"
     name: butpush
@@ -51,8 +49,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 1
-      maxLength: 10
       default: "push"
   - title: "Button HELD Value"
     name: butheld
@@ -61,8 +57,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 1
-      maxLength: 10
       default: "held"
   - title: "Button DOUBLE-PRESSED Value"
     name: butdouble
@@ -71,8 +65,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 1
-      maxLength: 10
       default: "double"
   - title: "Button TRIPLE-PRESSED Value"
     name: but3x
@@ -81,8 +73,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 1
-      maxLength: 10
       default: "triple"
   - title: "Publish Button State Changes"
     name: publish

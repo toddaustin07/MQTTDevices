@@ -36,8 +36,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 2
-      maxLength: 64
       default: "Contact.Action"
   - title: "Contact OPEN Value"
     name: contactopen
@@ -46,8 +44,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 1
-      maxLength: 10
       default: "open"
   - title: "Contact CLOSED Value"
     name: contactclosed
@@ -56,6 +52,4 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 1
-      maxLength: 10
       default: "closed"

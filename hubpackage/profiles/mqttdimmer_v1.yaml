@@ -38,8 +38,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 2
-      maxLength: 64
       default: "Switch.Action"
   - title: "Publish Dimmer State Changes"
     name: publish

@@ -38,8 +38,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 2
-      maxLength: 64
       default: "Switch.Action"
   - title: "Alarm OFF Value"
     name: alarmoff
@@ -48,8 +46,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 1
-      maxLength: 10
       default: "off"
   - title: "Alarm Siren Value"
     name: alarmsiren
@@ -58,8 +54,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 1
-      maxLength: 10
       default: "siren"
   - title: "Alarm Strobe Value"
     name: alarmstrobe
@@ -68,8 +62,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 1
-      maxLength: 10
       default: "strobe"
   - title: "Alarm Siren+Strobe Value"
     name: alarmboth
@@ -78,8 +70,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 1
-      maxLength: 10
       default: "both"
   - title: "Publish Alarm State Changes"
     name: publish

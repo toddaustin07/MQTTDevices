@@ -36,8 +36,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 2
-      maxLength: 64
       default: "Motion.Action"
   - title: "Motion ACTIVE Value"
     name: motionactive
@@ -46,8 +44,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 1
-      maxLength: 10
       default: "active"
   - title: "Motion INACTIVE Value"
     name: motioninactive
@@ -56,6 +52,4 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 1
-      maxLength: 10
       default: "inactive"

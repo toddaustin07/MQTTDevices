@@ -36,8 +36,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 2
-      maxLength: 64
       default: "Switch.Action"
   - title: "Switch ON Value"
     name: switchon
@@ -46,8 +44,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 1
-      maxLength: 10
       default: "on"
   - title: "Switch OFF Value"
     name: switchoff
@@ -56,8 +52,6 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 1
-      maxLength: 10
       default: "off"
   - title: "Publish Switch State Changes"
     name: publish
