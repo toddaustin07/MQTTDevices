@@ -28,7 +28,6 @@ preferences:
       options:
         json: "JSON"
         string: "String"
-        boolean: "Boolean"
       default: string
   - title: "JSON Key"
     name: jsonelement
@@ -42,24 +41,18 @@ preferences:
     name: switchon
     description: "Msg value for ON"
     required: true
-    preferenceType: enumeration
+    preferenceType: string
     definition:
-      options:
-        json: "JSON"
-        string: "String"
-        boolean: "Boolean"
-      default: string
+      stringType: text
+      default: "on"
   - title: "Switch OFF Value"
     name: switchoff
     description: "Msg value for OFF"
     required: true
-    preferenceType: enumeration
+    preferenceType: string
     definition:
-      options:
-        json: "JSON"
-        string: "String"
-        boolean: "Boolean"
-      default: string
+      stringType: text
+      default: "off"
   - title: "Publish Switch State Changes"
     name: publish
     description: "Enable/Disable"
