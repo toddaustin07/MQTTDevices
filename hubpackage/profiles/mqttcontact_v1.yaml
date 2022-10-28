@@ -28,7 +28,6 @@ preferences:
       options:
         json: "JSON"
         string: "String"
-        boolean: "Boolean"
       default: string
   - title: "JSON Key"
     name: jsonelement
@@ -44,13 +43,11 @@ preferences:
     required: true
     preferenceType: boolean
     definition:
-      stringType: boolean
-      default: true
+      default: false
   - title: "Contact CLOSED Value"
     name: contactclosed
     description: "Msg value for CLOSED"
     required: true
     preferenceType: boolean
     definition:
-      stringType: boolean
-      default: false
+      default: true
