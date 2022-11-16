@@ -1,20 +1,17 @@
-name: mqttbutton.v1
+name: mqttlock.v1
 components:
   - id: main
     capabilities:
-      - id: momentary
-        version: 1
-      - id: button
+      - id: lock
         version: 1
       - id: partyvoice23922.status
         version: 1
       - id: partyvoice23922.refresh
         version: 1
     categories:
-      - name: RemoteController
+      - name: SmartLock
 metadata:
-  vid: 63bd0088-6b3b-3d8e-af7a-2ae48dd9b6f6
-  mnmn: SmartThingsCommunity
+  ocfDeviceType: oic.d.smartlock
 preferences:
   - title: "Subscribe Topic"
     name: subTopic
@@ -41,50 +38,32 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 2
-      maxLength: 64
-      default: "Switch.Action"
-  - title: "Button PRESSED Value"
-    name: butpush
-    description: "Msg value for PRESSED"
+      default: "Lock.Action"
+  - title: "LOCKED Value"
+    name: locklocked
+    description: "Msg value for LOCKED"
     required: true
     preferenceType: string
     definition:
       stringType: text
-      minLength: 1
-      maxLength: 10
-      default: "push"
-  - title: "Button HELD Value"
-    name: butheld
-    description: "Msg value for HELD"
+      default: "locked"
+  - title: "UNLOCKED Value"
+    name: lockunlocked
+    description: "Msg value for UNLOCKED"
     required: true
     preferenceType: string
     definition:
       stringType: text
-      minLength: 1
-      maxLength: 10
-      default: "held"
-  - title: "Button DOUBLE-PRESSED Value"
-    name: butdouble
-    description: "Msg value for DOUBLE"
+      default: "unlocked"
+  - title: "Lock UNKNOWN STATE Value"
+    name: lockunknown
+    description: "Msg value for UNKNOWN"
     required: true
     preferenceType: string
     definition:
       stringType: text
-      minLength: 1
-      maxLength: 10
-      default: "double"
-  - title: "Button TRIPLE-PRESSED Value"
-    name: but3x
-    description: "Msg value for TRIPLE"
-    required: true
-    preferenceType: string
-    definition:
-      stringType: text
-      minLength: 1
-      maxLength: 10
-      default: "triple"
-  - title: "Publish Button State Changes"
+      default: "unknown"
+  - title: "Publish Switch State Changes"
     name: publish
     description: "Enable/Disable"
     required: true

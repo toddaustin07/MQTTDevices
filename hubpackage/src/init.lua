@@ -24,256 +24,49 @@ local Driver = require "st.driver"
 local cosock = require "cosock"
 local socket = require "cosock.socket"          -- just for time
 local log = require "log"
-local json = require "dkjson"
 
+local procmsg = require "procmessages"
+local sub = require "subscriptions"
+local cmd = require "cmdhandlers"
 local mqtt = require "mqtt"
 
 
 -- Global variables
-thisDriver = {}       -- this is used in the MQTT client module: TODO- pass it in at initialization
+thisDriver = {}               -- used in the MQTT client module: TODO- pass it in at initialization
+SUBSCRIBED_TOPICS = {}        -- referenced by other modules
+client = nil                  -- referenced by other modules
+creator_device = {}           -- referenced by other modules
+
+typemeta =  {
+              ['Switch']       = { ['profile'] = 'mqttswitch.v2',        ['created'] = 0, ['switch'] = true  },
+              ['Button']       = { ['profile'] = 'mqttbutton.v2',        ['created'] = 0, ['switch'] = false },
+              ['Contact']      = { ['profile'] = 'mqttcontact.v2',       ['created'] = 0, ['switch'] = false },
+              ['Motion']       = { ['profile'] = 'mqttmotion.v2',        ['created'] = 0, ['switch'] = false },
+              ['Alarm']        = { ['profile'] = 'mqttalarm.v2',         ['created'] = 0, ['switch'] = false },
+              ['Dimmer']       = { ['profile'] = 'mqttdimmer.v2b',       ['created'] = 0, ['switch'] = false },
+              ['Acceleration'] = { ['profile'] = 'mqttaccel.v1',         ['created'] = 0, ['switch'] = false },
+              ['Lock']         = { ['profile'] = 'mqttlock.v1',          ['created'] = 0, ['switch'] = false },
+              ['Presence']     = { ['profile'] = 'mqttpresence.v1',      ['created'] = 0, ['switch'] = false },
+              ['Sound']        = { ['profile'] = 'mqttsound.v1',         ['created'] = 0, ['switch'] = false },
+              ['Water']        = { ['profile'] = 'mqttwater.v1',         ['created'] = 0, ['switch'] = false },
+            }
 
 -- Module variables
 
-local client = nil
 local client_reset_inprogress = false
 
 local initialized = false
-local SUBSCRIBED_TOPICS = {}
 
-local creator_device
 local clearcreatemsg_timer
+
+local MASTERPROFILE = 'mqttcreator.v2b'
 
 
 -- Custom Capabilities
-local cap_createdev = capabilities["partyvoice23922.createmqttdev1"]
-local cap_status = capabilities["partyvoice23922.status"]
-local cap_topiclist = capabilities["partyvoice23922.topiclist"]
-local cap_refresh = capabilities["partyvoice23922.refresh"]
-
-
-local typemeta =  {
-                    ['Switch']     = { ['profile'] = 'mqttswitch.v1',        ['created'] = 0, ['switch'] = true },
-                    ['Button']     = { ['profile'] = 'mqttbutton.v1',        ['created'] = 0, ['switch'] = false },
-                    ['Contact']    = { ['profile'] = 'mqttcontact.v1',       ['created'] = 0, ['switch'] = false },
-                    ['Motion']     = { ['profile'] = 'mqttmotion.v1',        ['created'] = 0, ['switch'] = false },
-                    ['Alarm']      = { ['profile'] = 'mqttalarm.v1',         ['created'] = 0, ['switch'] = false },
-                    ['Dimmer']     = { ['profile'] = 'mqttdimmer.v1',        ['created'] = 0, ['switch'] = false },
-                  }
-
-local function build_html(list)
-
-  local html_list = ''
-
-  for _, item in ipairs(list) do
-    html_list = html_list .. '<tr><td>' .. item .. '</td></tr>\n'
-  end
-
-  local html =  {
-                  '<!DOCTYPE html>\n',
-                  '<HTML>\n',
-                  '<HEAD>\n',
-                  '<style>\n',
-                  'table, td {\n',
-                  '  border: 1px solid black;\n',
-                  '  border-collapse: collapse;\n',
-                  '  font-size: 12px;\n',
-                  '  padding: 3px;\n',
-                  '}\n',
-                  '</style>\n',
-                  '</HEAD>\n',
-                  '<BODY>\n',
-                  '<table>\n',
-                  html_list,
-                  '</table>\n',
-                  '</BODY>\n',
-                  '</HTML>\n'
-                }
-    
-  return (table.concat(html))
-end
-
-
-local function create_device(driver, dtype)
-
-  if dtype then
-
-    local PROFILE = typemeta[dtype].profile
-    if PROFILE then
-    
-      local MFG_NAME = 'SmartThings Community'
-      local MODEL = 'mqtttdev_' .. dtype
-      local LABEL = 'MQTT ' .. dtype
-      local ID = 'MQTT_' .. dtype .. '_' .. tostring(socket.gettime())
-
-      log.info (string.format('Creating new device: label=<%s>, id=<%s>', LABEL, ID))
-      if clearcreatemsg_timer then
-        driver:cancel_timer(clearcreatemsg_timer)
-      end
-
-      local create_device_msg = {
-                                  type = "LAN",
-                                  device_network_id = ID,
-                                  label = LABEL,
-                                  profile = PROFILE,
-                                  manufacturer = MFG_NAME,
-                                  model = MODEL,
-                                  vendor_provided_label = LABEL,
-                                }
-
-      assert (driver:try_create_device(create_device_msg), "failed to create device")
-    end
-  end
-end
-
-local function get_element_value(inputjson, key)
-
-  local compound = inputjson
-  local found = true
-
-  for element in string.gmatch(key, "[^%.]+") do
-    compound = compound[element]
-    if compound == nil then
-      found = false
-      break
-    end
-  end
-
-  if found then
-    return compound
-  else
-    return
-  end
-
-end
-
-
-local function determine_devices(targettopic)
-
-  local targetlist = {}
-  local devicelist = thisDriver:get_devices()
-
-  for id, topic in pairs(SUBSCRIBED_TOPICS) do
-    if topic == targettopic then
-
-      for _, device in ipairs(devicelist) do
-
-        if device.id == id then
-          table.insert(targetlist, device)
-
-        end
-      end
-    end
-  end
-  return targetlist
-
-end
-
-local function process_message(topic, msg)
-
-  log.debug (string.format("Processing received data msg: %s", msg))
-  log.debug (string.format("\tFrom topic: %s", topic))
-
-  local devicelist = determine_devices(topic)
-  log.debug ('# device matches for topic:', #devicelist)
-
-  if #devicelist > 0 then
-
-    for _, device in ipairs(devicelist) do
-
-      log.debug ('Match for', device.label)
-      local value
-
-      if device.preferences.format == 'json' then
-        local msgjson, _, err = json.decode (msg, 1, nil)
-        if err then
-          log.error ("JSON decode error processing received message:", err)
-        end
-
-        if msgjson then
-          value = get_element_value(msgjson, device.preferences.jsonelement)
-          if type(value) == 'number' then
-            log.debug ('Msg Value is a number')
-            value = tostring(value)
-          end
-        else
-          log.error ("No JSON found in received message")
-        end
-
-      elseif device.preferences.format == 'string' then
-        value = msg
-      end
-
-      if value then
-        local dtype = device.device_network_id:match('MQTT_(.+)_+')
-
-        if dtype == 'Switch' then
-          if value == device.preferences.switchon then
-            device:emit_event(capabilities.switch.switch.on())
-          elseif value == device.preferences.switchoff then
-            device:emit_event(capabilities.switch.switch.off())
-          else
-            log.warn ('Unconfigured switch value received')
-          end
-          
-        elseif dtype == 'Button' then  
-          if value == device.preferences.butpush then
-            device:emit_event(capabilities.button.button.pushed({state_change = true}))
-          elseif value == device.preferences.butheld then
-            device:emit_event(capabilities.button.button.held({state_change = true}))
-          elseif value == device.preferences.butdouble then
-            device:emit_event(capabilities.button.button.double({state_change = true}))
-          elseif value == device.preferences.but3x then
-            device:emit_event(capabilities.button.button.pushed_3x({state_change = true}))
-          else
-            log.warn ('Unconfigured button value received')
-          end
-            
-        elseif dtype == 'Contact' then
-          if value == device.preferences.contactopen then
-            device:emit_event(capabilities.contactSensor.contact.open())
-          elseif value == device.preferences.contactclosed then
-            device:emit_event(capabilities.contactSensor.contact.closed())
-          else
-            log.warn ('Unconfigured contact value received')
-          end
-          
-        elseif dtype == 'Motion' then
-          if value == device.preferences.motionactive then
-            device:emit_event(capabilities.motionSensor.motion.active())
-          elseif value == device.preferences.motioninactive then
-            device:emit_event(capabilities.motionSensor.motion.inactive())
-          else
-            log.warn ('Unconfigured motion value received')
-          end
-          
-        elseif dtype == 'Alarm' then
-          if value == device.preferences.alarmoff then
-            device:emit_event(capabilities.alarm.alarm.off())
-          elseif value == device.preferences.alarmsiren then
-            device:emit_event(capabilities.alarm.alarm.siren())
-          elseif value == device.preferences.alarmstrobe then
-            device:emit_event(capabilities.alarm.alarm.strobe())
-          elseif value == device.preferences.alarmboth then
-            device:emit_event(capabilities.alarm.alarm.both())
-          else
-            log.warn ('Unconfigured alarm value received')
-          end
-          
-        elseif dtype == 'Dimmer' then
-          local numvalue = tonumber(value)
-          if numvalue then
-            log.debug ('Dimmer value received:', numvalue)
-            if numvalue < 0 then; numvalue = 0; end
-            if numvalue > 100 then; numvalue = 100; end
-            device:emit_event(capabilities.switchLevel.level(numvalue))
-          else
-            log.warn('Invalid dimmer value received (NaN)');
-          end
-        end
-      end
-    end
-  end
-end
+cap_createdev = capabilities["partyvoice23922.createmqttdev2"]
+cap_status = capabilities["partyvoice23922.status"]
+cap_topiclist = capabilities["partyvoice23922.topiclist"]
+cap_refresh = capabilities["partyvoice23922.refresh"]
 
 
 local function create_MQTT_client(device)
@@ -309,7 +102,7 @@ local function create_MQTT_client(device)
       --log.info("received:", msg, type(msg))
       -- example msg:  PUBLISH{payload="Hello world", topic="testmqtt/pimylifeup", dup=false, type=3, qos=0, retain=false}
 
-      process_message(msg.topic, msg.payload)
+      procmsg.process_message(msg.topic, msg.payload)
 
 
     end,
@@ -323,101 +116,11 @@ local function create_MQTT_client(device)
 
 end
 
-local function is_subscribed(qtopic)
-
-  for _, topic in pairs(SUBSCRIBED_TOPICS) do
-    if topic == qtopic then; return true; end
-  end
-  return false
-
-end
-
-local function unique_topic_list()
-
-  local list = {}
-  for _, topic in pairs(SUBSCRIBED_TOPICS) do
-    local alreadyfound=false
-    for _, item in ipairs(list) do
-      if item == topic then; alreadyfound = true; end
-    end
-    if not alreadyfound then
-      table.insert(list, topic)
-    end
-  end
-  return list
-
-end
-
-local function subscribe_topic(device)
-
-  if is_subscribed(device.preferences.subTopic) then
-    log.debug ('Already subscribed to topic', device.preferences.subTopic)
-    SUBSCRIBED_TOPICS[device.id] = device.preferences.subTopic
-    device:emit_event(cap_status.status('Subscribed'))
-  else
-    SUBSCRIBED_TOPICS[device.id] = device.preferences.subTopic
-    assert(client:subscribe{ topic=device.preferences.subTopic, qos=1, callback=function(suback)
-      log.info(string.format("Device <%s> subscribed to %s: %s", device.label, device.preferences.subTopic, suback))
-      
-      creator_device:emit_event(cap_topiclist.topiclist(build_html(unique_topic_list())))
-      device:emit_event(cap_status.status('Subscribed'))
-
-    end})
-  end
-
-end
-
-
-local function subscribe_all()
-
-  local devicelist = thisDriver:get_devices()
-  for _, device in ipairs(devicelist) do
-    if not device.device_network_id:find('Master', 1, 'plaintext') then
-      if (device.preferences.subTopic ~= 'xxxxx/xxxxx') and (device.preferences.subTopic ~= nil) then
-        subscribe_topic(device)
-      end
-    end
-  end
-end
-
-local function unsubscribe(id, topic, delete_flag)
-
-  local qty_check_val = 1                                 -- =1 if device changing subscription; =0 if device was deleted
-  if delete_flag == true then; qty_check_val = 0; end
-
-  if #determine_devices(topic) == qty_check_val then      -- unsubscribe only if no more devices using this topic
-
-    local rc, err = client:unsubscribe{ topic=topic, callback=function(unsuback)
-          log.info("\t\tUnsubscribe callback:", unsuback)
-      end}
-      
-    if rc == false then
-      log.debug ('\tUnsubscribe failed with err:', err)
-    else
-      log.debug (string.format('\tUnsubscribed from %s', topic))
-      SUBSCRIBED_TOPICS[id] = nil
-      creator_device:emit_event(cap_topiclist.topiclist(build_html(unique_topic_list())))
-    end
-  else
-    log.debug (string.format('Subscription to <%s> still in use by another device', topic))
-    SUBSCRIBED_TOPICS[id] = nil
-  end
-end
-
-local function unsubscribe_all()
-
-  local sublist = SUBSCRIBED_TOPICS
-
-  for id, topic in pairs(sublist) do
-    unsubscribe(id, topic)
-  end
-
-end
 
 local function schedule_subscribe()
 
   if client then
-    subscribe_all()
+    sub.subscribe_all()
   else
     log.warn('Broker not yet connected')
     thisDriver:call_with_delay(2, schedule_subscribe)
@@ -438,7 +141,7 @@ local function init_mqtt(device)
   if client then
     log.debug ('Unsubscribing all and disconnecting current client...')
     
-    unsubscribe_all()
+    sub.unsubscribe_all()
 
     local rc, err = client:disconnect()
     if rc == false then
@@ -485,144 +188,6 @@ local function init_mqtt(device)
 
 end
 
-
-local function get_subscribed_topic(device)
-
-  for id, topic in pairs(SUBSCRIBED_TOPICS) do
-    if id == device.id then
-      return id, topic
-    end
-  end
-end
-
-
-local function mqtt_subscribe(device)
-
-  if client then
-
-    local id, topic = get_subscribed_topic(device)
-
-    if topic then
-      log.debug (string.format('Unsubscribing device <%s> from %s', device.label, topic))
-      unsubscribe(id, topic)
-    end
-
-    subscribe_topic(device)
-  end
-end
-
-
-local function publish_message(device, payload)
-
-  if client and payload then
-  
-    local qos = tonumber(device.preferences.qos:match('qos(%d)$'))
-    assert(client:publish{
-      topic = device.preferences.pubtopic,
-      payload = payload,
-      qos = qos
-    })
-    log.debug (string.format('Message "%s" published to topic %s with qos=%d', payload, device.preferences.pubtopic, qos))
-    
-  end
-
-end
-
------------------------------------------------------------------------
---                          COMMAND HANDLERS
------------------------------------------------------------------------
-
-local function handle_refresh(driver, device, command)
-
-  log.info ('Refresh requested')
-
-  if device.device_network_id:find('Master', 1, 'plaintext') then
-    client_reset_inprogress = true
-    init_mqtt(device)
-  else
-    mqtt_subscribe(device)
-  end
-
-end
-
-local function handle_createdevice(driver, device, command)
-
-  log.debug("Device type selection: ", command.args.value)
-
-  device:emit_event(cap_createdev.deviceType('Creating device...'))
-
-  create_device(driver, command.args.value)
-
-end
-
-local function handle_switch(driver, device, command)
-
-  log.info ('Switch triggered:', command.command)
-  
-  device:emit_event(capabilities.switch.switch(command.command))
-
-  if device.preferences.publish == true then
-    
-    local payload
-    
-    local cmdmap = {
-                      ['on'] = device.preferences.switchon,
-                      ['off'] = device.preferences.switchoff
-                   }
-                   
-    publish_message(device, cmdmap[command.command])
-
-  end
-end
-
-local function handle_button(driver, device, command)
-
-  log.info ('Button pressed:', command.command)
-  
-  device:emit_event(capabilities.button.button.pushed({state_change = true}))
-  
-  if device.preferences.publish == true then
-    
-    publish_message(device, device.preferences.butpush)
-      
-  end
-end
-
-local function handle_alarm(driver, device, command)
-
-  log.info ('Alarm triggered:', command.command)
-  
-  device:emit_event(capabilities.alarm.alarm(command.command))
-
-  if device.preferences.publish == true then
-    
-    local payload
-    
-    local cmdmap = {
-                      ['off'] = device.preferences.alarmoff,
-                      ['siren'] = device.preferences.alarmsiren,
-                      ['strobe'] = device.preferences.alarmstrobe,
-                      ['both'] = device.preferences.alarmboth,
-                   }
-                   
-    publish_message(device, cmdmap[command.command])
-
-  end
-end
-
-local function handle_dimmer(driver, device, command)
-
-  log.info ('Dimmmer value changed to ', command.args.level)
-  
-  device:emit_event(capabilities.switchLevel.level(command.args.level))
-  
-  if device.preferences.publish == true then
-    
-    publish_message(device, tostring(command.args.level))
-    
-  end
-end
-      
 ------------------------------------------------------------------------
 --                REQUIRED EDGE DRIVER HANDLERS
 ------------------------------------------------------------------------
@@ -634,7 +199,7 @@ local function device_init(driver, device)
   
   if device.device_network_id:find('Master', 1, 'plaintext') then
   
-    device:try_update_metadata({profile='mqttcreator.v2'})              -- *** REMOVE IN NEXT UPDATE ***
+    device:try_update_metadata({profile=MASTERPROFILE})              -- *** REMOVE IN NEXT UPDATE ***
     creator_device = device
     device:emit_event(cap_createdev.deviceType(' ', { visibility = { displayed = false } }))
     device:emit_event(cap_status.status('Not Connected'))
@@ -677,6 +242,19 @@ local function device_added (driver, device)
       device:emit_event(capabilities.button.supportedButtonValues(supported_values))
     elseif dtype == 'Alarm' then
       device:emit_event(capabilities.alarm.alarm('off'))
+      
+    elseif dtype == 'Acceleration' then
+      device:emit_event(capabilities.accelerationSensor.acceleration('inactive'))
+    elseif dtype == 'Lock' then
+      device:emit_event(capabilities.lock.lock('unlocked'))
+    elseif dtype == 'Presence' then
+      device:emit_event(capabilities.presenceSensor.presence('not present'))
+    elseif dtype == 'Sound' then
+      device:emit_event(capabilities.soundSensor.sound('not detected'))
+      device:emit_event(capabilities.audioVolume.volume(0))
+    elseif dtype == 'Water' then
+      device:emit_event(capabilities.waterSensor.water('dry'))
+      
     end
 
     creator_device:emit_event(cap_createdev.deviceType('Device created'))
@@ -704,15 +282,15 @@ local function device_removed(driver, device)
   log.warn(device.id .. ": " .. device.device_network_id .. "> removed")
 
   if not device.device_network_id:find('Master', 1, 'plaintext') then
-    local id, topic = get_subscribed_topic(device)
+    local id, topic = sub.get_subscribed_topic(device)
 
     if topic then
-      unsubscribe(id, topic, true)
+      sub.unsubscribe(id, topic, true)
     end
   else
     if client then
+      sub.unsubscribe_all()
       client:disconnect()
-      unsubscribe_all()
     end
     initialized = false
   end
@@ -741,11 +319,13 @@ local function shutdown_handler(driver, event)
 
   if client then
 
-    for _, topic in ipairs(SUBSCRIBED_TOPICS) do
+    --[[
+    for _, topic in pairs(SUBSCRIBED_TOPICS) do
       client:unsubscribe{ topic, callback=function(unsuback)
         log.info("\tUnsubscribed from " .. topic)
       end}
     end
+    --]]
 
     client_reset_inprogress = true
     client:disconnect()
@@ -770,13 +350,13 @@ local function handler_infochanged (driver, device, event, args)
 
     if args.old_st_store.preferences.subTopic ~= device.preferences.subTopic then
       log.info ('Subscribe Topic changed to: ', device.preferences.subTopic)
-      local id, topic = get_subscribed_topic(device)
+      local id, topic = sub.get_subscribed_topic(device)
       if topic then
-        unsubscribe(id, topic)
+        sub.unsubscribe(id, topic)
         device:emit_event(cap_status.status('Un-Subscribed'))
       end
       
-      subscribe_topic(device)
+      sub.subscribe_topic(device)
       
     elseif args.old_st_store.preferences.userid ~= device.preferences.userid then
       uname_changed = true
@@ -809,7 +389,7 @@ local function discovery_handler(driver, _, should_continue)
     local MODEL = 'MQTTCreatorV1'
     local VEND_LABEL = 'MQTT Device Creator V1' --update; change for testing
     local ID = 'MQTTDev_Masterv1'               --change for testing
-    local PROFILE = 'mqttcreator.v2'            --update; change for testing
+    local PROFILE = MASTERPROFILE           --update; change for testing
 
     -- Create master creator device
 
@@ -849,30 +429,37 @@ thisDriver = Driver("MQTT Devices", {
   driver_lifecycle = shutdown_handler,
   capability_handlers = {
     [cap_createdev.ID] = {
-      [cap_createdev.commands.setDeviceType.NAME] = handle_createdevice,
+      [cap_createdev.commands.setDeviceType.NAME] = cmd.handle_createdevice,
     },
     [cap_refresh.ID] = {
-      [cap_refresh.commands.push.NAME] = handle_refresh,
+      [cap_refresh.commands.push.NAME] = cmd.handle_refresh,
     },
     [capabilities.switch.ID] = {
-      [capabilities.switch.commands.on.NAME] = handle_switch,
-      [capabilities.switch.commands.off.NAME] = handle_switch,
-    },
-    [capabilities.momentary.ID] = {
-      [capabilities.momentary.commands.push.NAME] = handle_button,
-    },
-    [capabilities.alarm.ID] = {
-      [capabilities.alarm.commands.off.NAME] = handle_alarm,
-      [capabilities.alarm.commands.siren.NAME] = handle_alarm,
-      [capabilities.alarm.commands.strobe.NAME] = handle_alarm,
-      [capabilities.alarm.commands.both.NAME] = handle_alarm,
+      [capabilities.switch.commands.on.NAME] = cmd.handle_switch,
+      [capabilities.switch.commands.off.NAME] = cmd.handle_switch,
     },
     [capabilities.switchLevel.ID] = {
-      [capabilities.switchLevel.commands.setLevel.NAME] = handle_dimmer,
+      [capabilities.switchLevel.commands.setLevel.NAME] = cmd.handle_dimmer,
+    },
+    [capabilities.momentary.ID] = {
+      [capabilities.momentary.commands.push.NAME] = cmd.handle_button,
+    },
+    [capabilities.alarm.ID] = {
+      [capabilities.alarm.commands.off.NAME] = cmd.handle_alarm,
+      [capabilities.alarm.commands.siren.NAME] = cmd.handle_alarm,
+      [capabilities.alarm.commands.strobe.NAME] = cmd.handle_alarm,
+      [capabilities.alarm.commands.both.NAME] = cmd.handle_alarm,
+    },
+    [capabilities.lock.ID] = {
+      [capabilities.lock.commands.lock.NAME] = cmd.handle_lock,
+      [capabilities.lock.commands.unlock.NAME] = cmd.handle_lock,
+    },
+    [capabilities.audioVolume.ID] = {
+      [capabilities.audioVolume.commands.setVolume.NAME] = cmd.handle_volume,
     },
   }
 })
 
-log.info ('MQTT Device Driver V1.1 Started')
+log.info ('MQTT Device Driver V1.2 Started')
 
 thisDriver:run()

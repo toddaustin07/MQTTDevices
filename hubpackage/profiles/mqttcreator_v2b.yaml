@@ -1,9 +1,8 @@
-name: mqttcreator.v2
+name: mqttcreator.v2b
 components:
   - id: main
-    label: Creatorv1.1
     capabilities:
-      - id: partyvoice23922.createmqttdev1
+      - id: partyvoice23922.createmqttdev2
         version: 1
       - id: partyvoice23922.status
         version: 1

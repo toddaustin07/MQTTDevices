@@ -1,15 +1,17 @@
-name: mqttmotion.v1
+name: mqttdimmer.v2
 components:
   - id: main
     capabilities:
-      - id: motionSensor
+      - id: switchLevel
         version: 1
       - id: partyvoice23922.status
         version: 1
       - id: partyvoice23922.refresh
         version: 1
     categories:
-      - name: Motion
+      - name: Switch
+metadata:
+  ocfDeviceType: oic.d.switch
 preferences:
   - title: "Subscribe Topic"
     name: subTopic
@@ -36,26 +38,30 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 2
-      maxLength: 64
-      default: "Motion.Action"
-  - title: "Motion ACTIVE Value"
-    name: motionactive
-    description: "Msg value for ACTIVE"
+      default: "Dimmer.Action"
+  - title: "Publish Dimmer State Changes"
+    name: publish
+    description: "Enable/Disable"
+    required: true
+    preferenceType: boolean
+    definition:
+      default: false
+  - title: "Publish Topic"
+    name: pubtopic
+    description: "Topic String"
     required: true
     preferenceType: string
     definition:
       stringType: text
-      minLength: 1
-      maxLength: 10
-      default: "active"
-  - title: "Motion INACTIVE Value"
-    name: motioninactive
-    description: "Msg value for INACTIVE"
+      default: "xxxxx/xxxxx"
+  - title: "Publish QoS"
+    name: qos
+    description: "Quality of Service"
     required: true
-    preferenceType: string
+    preferenceType: enumeration
     definition:
-      stringType: text
-      minLength: 1
-      maxLength: 10
-      default: "inactive"
+      options:
+        qos0: "0"
+        qos1: "1"
+        qos2: "2"
+      default: qos1

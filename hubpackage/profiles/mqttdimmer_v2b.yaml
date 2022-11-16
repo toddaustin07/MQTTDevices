@@ -1,17 +1,17 @@
-name: mqttalarm.v1
+name: mqttdimmer.v2b
 components:
   - id: main
     capabilities:
-      - id: alarm
+      - id: switchLevel
         version: 1
       - id: partyvoice23922.status
         version: 1
       - id: partyvoice23922.refresh
         version: 1
     categories:
-      - name: Siren
+      - name: Switch
 metadata:
-  ocfDeviceType: x.com.st.d.siren
+  ocfDeviceType: oic.d.switch
 preferences:
   - title: "Subscribe Topic"
     name: subTopic
@@ -38,50 +38,15 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      minLength: 2
-      maxLength: 64
-      default: "Switch.Action"
-  - title: "Alarm OFF Value"
-    name: alarmoff
-    description: "Msg value for OFF"
+      default: "Dimmer.Action"
+  - title: "Max Dimmer Value"
+    name: dimmermax
+    description: "Enter a number"
     required: true
-    preferenceType: string
+    preferenceType: integer
     definition:
-      stringType: text
-      minLength: 1
-      maxLength: 10
-      default: "off"
-  - title: "Alarm Siren Value"
-    name: alarmsiren
-    description: "Msg value for SIREN"
-    required: true
-    preferenceType: string
-    definition:
-      stringType: text
-      minLength: 1
-      maxLength: 10
-      default: "siren"
-  - title: "Alarm Strobe Value"
-    name: alarmstrobe
-    description: "Msg value for STROBE"
-    required: true
-    preferenceType: string
-    definition:
-      stringType: text
-      minLength: 1
-      maxLength: 10
-      default: "strobe"
-  - title: "Alarm Siren+Strobe Value"
-    name: alarmboth
-    description: "Msg value for SIREN+STROBE"
-    required: true
-    preferenceType: string
-    definition:
-      stringType: text
-      minLength: 1
-      maxLength: 10
-      default: "both"
-  - title: "Publish Alarm State Changes"
+      default: 100
+  - title: "Publish Dimmer State Changes"
     name: publish
     description: "Enable/Disable"
     required: true
