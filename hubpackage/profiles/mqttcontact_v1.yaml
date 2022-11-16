@@ -41,13 +41,15 @@ preferences:
     name: contactopen
     description: "Msg value for OPEN"
     required: true
-    preferenceType: boolean
+    preferenceType: string
     definition:
+      value: boolean
       default: false
   - title: "Contact CLOSED Value"
     name: contactclosed
     description: "Msg value for CLOSED"
     required: true
-    preferenceType: boolean
+    preferenceType: string
     definition:
+      value: boolean
       default: true
