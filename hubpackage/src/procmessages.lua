@@ -21,6 +21,8 @@
 local log = require "log"
 local capabilities = require "st.capabilities"
 local json = require "dkjson"
+local stutils = require "st.utils"
+
 local sub = require "subscriptions"
 
 
@@ -184,6 +186,15 @@ local function process_message(topic, msg)
             end
             
             device:emit_event(capabilities.switchLevel.level(numvalue))
+            
+            if device:supports_capability_by_id('switch') then
+              if numvalue > 0 then
+                device:emit_event(capabilities.switch.switch('on'))
+              else
+                device:emit_event(capabilities.switch.switch('off'))
+              end
+            end
+            
           else
             log.warn('Invalid dimmer value received (NaN)');
           end
@@ -240,6 +251,25 @@ local function process_message(topic, msg)
             log.warn ('Unconfigured water value received')
           end
           
+        elseif dtype == 'Temperature' then
+        
+          local tempunit = 'C'
+          if device.preferences.dtempunit == 'fahrenheit' then
+            tempunit = 'F'
+          end
+          
+          value = tonumber(value)
+          local tempvalue = value
+          if device.preferences.rtempunit == 'fahrenheit' then
+            if device.preferences.dtempunit == 'celsius' then
+              tempvalue = stutils.f_to_c(value)
+            end
+          elseif device.preferences.dtempunit == 'fahrenheit' then
+              tempvalue = stutils.c_to_f(value)
+          end
+          
+          device:emit_event(capabilities.temperatureMeasurement.temperature({value = tempvalue, unit = tempunit}))
+          device:emit_event(cap_tempset.vtemp({value = tempvalue, unit = tempunit}))
         end
       else
         log.warn ('No valid value found in message; ignoring')

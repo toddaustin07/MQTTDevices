@@ -43,30 +43,43 @@ typemeta =  {
               ['Contact']      = { ['profile'] = 'mqttcontact.v2',       ['created'] = 0, ['switch'] = false },
               ['Motion']       = { ['profile'] = 'mqttmotion.v2',        ['created'] = 0, ['switch'] = false },
               ['Alarm']        = { ['profile'] = 'mqttalarm.v2',         ['created'] = 0, ['switch'] = false },
-              ['Dimmer']       = { ['profile'] = 'mqttdimmer.v2b',       ['created'] = 0, ['switch'] = false },
+              ['Dimmer']       = { ['profile'] = 'mqttdimmer.v3',        ['created'] = 0, ['switch'] = true },
               ['Acceleration'] = { ['profile'] = 'mqttaccel.v1',         ['created'] = 0, ['switch'] = false },
-              ['Lock']         = { ['profile'] = 'mqttlock.v1',          ['created'] = 0, ['switch'] = false },
+              ['Lock']         = { ['profile'] = 'mqttlock.v2',          ['created'] = 0, ['switch'] = false },
               ['Presence']     = { ['profile'] = 'mqttpresence.v1',      ['created'] = 0, ['switch'] = false },
               ['Sound']        = { ['profile'] = 'mqttsound.v1',         ['created'] = 0, ['switch'] = false },
               ['Water']        = { ['profile'] = 'mqttwater.v1',         ['created'] = 0, ['switch'] = false },
+              ['Temperature']  = { ['profile'] = 'mqtttemp.v1',          ['created'] = 0, ['switch'] = false },
             }
 
 -- Module variables
 
-local client_reset_inprogress = false
-
 local initialized = false
-
 local clearcreatemsg_timer
-
-local MASTERPROFILE = 'mqttcreator.v2b'
+local shutdown_requested = false
+local client_reset_inprogress = false
+local MASTERPROFILE = 'mqttcreator.v2c'
 
 
 -- Custom Capabilities
-cap_createdev = capabilities["partyvoice23922.createmqttdev2"]
+cap_createdev = capabilities["partyvoice23922.createmqttdev3"]
 cap_status = capabilities["partyvoice23922.status"]
 cap_topiclist = capabilities["partyvoice23922.topiclist"]
 cap_refresh = capabilities["partyvoice23922.refresh"]
+
+cap_tempset = capabilities["partyvoice23922.vtempset"]
+
+
+
+local function schedule_subscribe()
+
+  if client then
+    sub.subscribe_all()
+  else
+    log.warn('Broker not yet connected')
+    thisDriver:call_with_delay(2, schedule_subscribe)
+  end
+end
 
 
 local function create_MQTT_client(device)
@@ -94,6 +107,7 @@ local function create_MQTT_client(device)
       end
       log.info("Connected to MQTT broker:", connack) -- successful connection
       device:emit_event(cap_status.status('Connected to Broker'))
+      thisDriver:call_with_delay(3, schedule_subscribe)
     end,
 
     message = function(msg)
@@ -117,18 +131,11 @@ local function create_MQTT_client(device)
 end
 
 
-local function schedule_subscribe()
+function init_mqtt(device)
 
-  if client then
-    sub.subscribe_all()
-  else
-    log.warn('Broker not yet connected')
-    thisDriver:call_with_delay(2, schedule_subscribe)
-  end
-end
-
-
-local function init_mqtt(device)
+  if client_reset_inprogress == true then; return; end
+  
+  if device == nil then; device = creator_device; end       -- needed if invoked via driver:call_with_delay() method
 
   if device.preferences.broker == '192.168.1.xxx' or
      device.preferences.subTopic == 'xxxxx/xxxxx' then
@@ -137,7 +144,9 @@ local function init_mqtt(device)
       return
   end
 
-  device:emit_event(cap_status.status('Reconnecting'))
+  device:emit_event(cap_status.status('Connecting...'))
+  
+  -- If already connected, then unsubscribe alland  shutdown
   if client then
     log.debug ('Unsubscribing all and disconnecting current client...')
     
@@ -145,47 +154,57 @@ local function init_mqtt(device)
 
     local rc, err = client:disconnect()
     if rc == false then
-      log.debug ('\tDisconnect failed with err:', err)
+      log.error ('\tDisconnect failed with err:', err)
     elseif rc == true then
-      log.debug ('\tDisconnected')
+      log.debug ('\tDisconnected from broker')
     end
   end
 
   client = create_MQTT_client(device)
 
-  -- Run MQTT loop in separate thread; TODO: thread needs to somehow get killed if manual reconnect (?)
+  if client and (device:get_field('client_thread') ~= true) then
+  
+  -- Run MQTT loop in separate thread
 
-  cosock.spawn(function()
-    while true do
-      local ok, err = mqtt.run_sync(client)
-
-      if ok == false then
-        if string.lower(err):find('connection refused', 1, 'plaintext') or err == "closed" then
-          if client_reset_inprogress == true then; break; end
-          device:emit_event(cap_status.status('Connection Lost; Reconnecting'))
-          repeat
-            -- create new mqtt client
-            cosock.socket.sleep(15)
-            if client_reset_inprogress == true then
-              client_reset_inprogress = false
-              return
-            end
-            log.info ('Attempting to reconnect to broker...')
-            client = create_MQTT_client(device)
-          until client
-
+    cosock.spawn(function()
+      device:set_field('client_thread', true)
+      while true do
+        local ok, err = mqtt.run_sync(client)
+        client = nil
+        if ok == false then
+          log.warn ('MQTT run_sync returned: ', err)
+          if shutdown_requested == true then
+            device:emit_event(cap_status.status('Driver shutdown'))
+            return
+          end
+          if string.lower(err):find('connection refused', 1, 'plaintext') or err == "closed" then
+            device:emit_event(cap_status.status('Reconnecting...'))
+            device:emit_event(cap_topiclist.topiclist(' ', { visibility = { displayed = false } }))
+            client_reset_inprogress = true
+            repeat
+              -- pause, then try to create new mqtt client
+              cosock.socket.sleep(15)
+              log.info ('Attempting to reconnect to broker...')
+              client = create_MQTT_client(device)
+            until client
+            client_reset_inprogress = false
+          else
+            break
+          end
         else
-          break
+          log.error ('Unexpected return from MQTT client:', ok, err)
         end
-      else
-        log.error ('Unexpected return from MQTT client:', ok, err)
       end
-    end
-  end, 'MQTT synch mode')
+      device:set_field('client_thread', false)
+    end, 'MQTT synch mode')
 
-  -- Schedule device subscriptions
-  thisDriver:call_with_delay(3, schedule_subscribe)
-
+    -- Schedule device subscriptions
+    --thisDriver:call_with_delay(3, schedule_subscribe)
+    
+  elseif client == nil then
+    log.error ('Create MQTT Client failed')
+    thisDriver:call_with_delay(15, init_mqtt)
+  end
 end
 
 ------------------------------------------------------------------------
@@ -199,13 +218,13 @@ local function device_init(driver, device)
   
   if device.device_network_id:find('Master', 1, 'plaintext') then
   
-    device:try_update_metadata({profile=MASTERPROFILE})              -- *** REMOVE IN NEXT UPDATE ***
     creator_device = device
     device:emit_event(cap_createdev.deviceType(' ', { visibility = { displayed = false } }))
     device:emit_event(cap_status.status('Not Connected'))
-    device:emit_event(cap_topiclist.topiclist(' '))
+    device:emit_event(cap_topiclist.topiclist(' ', { visibility = { displayed = false } }))
     
     initialized = true
+    device:set_field('client_thread', false)
     init_mqtt(device)
 
   else
@@ -228,6 +247,7 @@ local function device_added (driver, device)
       device:emit_event(capabilities.switch.switch('off'))
     elseif dtype == 'Dimmer' then
       device:emit_event(capabilities.switchLevel.level(0))
+      device:emit_event(capabilities.switch.switch('off'))
     elseif dtype == 'Contact' then
       device:emit_event(capabilities.contactSensor.contact('closed'))
     elseif dtype == 'Motion' then
@@ -254,7 +274,9 @@ local function device_added (driver, device)
       device:emit_event(capabilities.audioVolume.volume(0))
     elseif dtype == 'Water' then
       device:emit_event(capabilities.waterSensor.water('dry'))
-      
+    elseif dtype == 'Temperature' then
+      device:emit_event(capabilities.temperatureMeasurement.temperature(20))
+      device:emit_event(cap_tempset.vtemp({value=20, unit='C'}))
     end
 
     creator_device:emit_event(cap_createdev.deviceType('Device created'))
@@ -290,6 +312,7 @@ local function device_removed(driver, device)
   else
     if client then
       sub.unsubscribe_all()
+      shutdown_requested = true
       client:disconnect()
     end
     initialized = false
@@ -299,6 +322,7 @@ local function device_removed(driver, device)
 
   if #devicelist == 0 then
     if client then
+      shutdown_requested = true
       client:disconnect()
     end
   end
@@ -327,7 +351,7 @@ local function shutdown_handler(driver, event)
     end
     --]]
 
-    client_reset_inprogress = true
+    shutdown_requested = true
     client:disconnect()
     creator_device:emit_event(cap_status.status('Driver Shutdown'))
     log.info("Disconnected from MQTT broker")
@@ -369,7 +393,6 @@ local function handler_infochanged (driver, device, event, args)
     
     if ip_changed or uname_changed or pw_changed then
       if device.preferences.broker ~= '192.168.1.xxx' then
-        client_reset_inprogress = true
         init_mqtt(device)
       end
     end
@@ -387,7 +410,7 @@ local function discovery_handler(driver, _, should_continue)
 
     local MFG_NAME = 'SmartThings Community'
     local MODEL = 'MQTTCreatorV1'
-    local VEND_LABEL = 'MQTT Device Creator V1' --update; change for testing
+    local VEND_LABEL = 'MQTT Device Creator V1b' --update; change for testing
     local ID = 'MQTTDev_Masterv1'               --change for testing
     local PROFILE = MASTERPROFILE           --update; change for testing
 
@@ -433,6 +456,9 @@ thisDriver = Driver("MQTT Devices", {
     },
     [cap_refresh.ID] = {
       [cap_refresh.commands.push.NAME] = cmd.handle_refresh,
+    },
+    [cap_tempset.ID] = {
+      [cap_tempset.commands.setvTemp.NAME] = cmd.handle_tempset,
     },
     [capabilities.switch.ID] = {
       [capabilities.switch.commands.on.NAME] = cmd.handle_switch,

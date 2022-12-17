@@ -1,0 +1,61 @@
+name: mqttmotion.v1
+components:
+  - id: main
+    capabilities:
+      - id: motionSensor
+        version: 1
+      - id: partyvoice23922.status
+        version: 1
+      - id: partyvoice23922.refresh
+        version: 1
+    categories:
+      - name: Motion
+preferences:
+  - title: "Subscribe Topic"
+    name: subTopic
+    description: "Topic Name"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "xxxxx/xxxxx"
+  - title: "Expected Message Format"
+    name: format
+    description: "Select type"
+    required: true
+    preferenceType: enumeration
+    definition:
+      options:
+        json: "JSON"
+        string: "String"
+      default: string
+  - title: "JSON Key"
+    name: jsonelement
+    description: "Data element"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      minLength: 2
+      maxLength: 64
+      default: "Motion.Action"
+  - title: "Motion ACTIVE Value"
+    name: motionactive
+    description: "Msg value for ACTIVE"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      minLength: 1
+      maxLength: 10
+      default: "active"
+  - title: "Motion INACTIVE Value"
+    name: motioninactive
+    description: "Msg value for INACTIVE"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      minLength: 1
+      maxLength: 10
+      default: "inactive"

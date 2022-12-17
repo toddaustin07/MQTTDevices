@@ -1,0 +1,112 @@
+name: mqttbutton.v1
+components:
+  - id: main
+    capabilities:
+      - id: momentary
+        version: 1
+      - id: button
+        version: 1
+      - id: partyvoice23922.status
+        version: 1
+      - id: partyvoice23922.refresh
+        version: 1
+    categories:
+      - name: RemoteController
+metadata:
+  vid: 63bd0088-6b3b-3d8e-af7a-2ae48dd9b6f6
+  mnmn: SmartThingsCommunity
+preferences:
+  - title: "Subscribe Topic"
+    name: subTopic
+    description: "Topic Name"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "xxxxx/xxxxx"
+  - title: "Expected Message Format"
+    name: format
+    description: "Select type"
+    required: true
+    preferenceType: enumeration
+    definition:
+      options:
+        json: "JSON"
+        string: "String"
+      default: string
+  - title: "JSON Key"
+    name: jsonelement
+    description: "Data element"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      minLength: 2
+      maxLength: 64
+      default: "Switch.Action"
+  - title: "Button PRESSED Value"
+    name: butpush
+    description: "Msg value for PRESSED"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      minLength: 1
+      maxLength: 10
+      default: "push"
+  - title: "Button HELD Value"
+    name: butheld
+    description: "Msg value for HELD"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      minLength: 1
+      maxLength: 10
+      default: "held"
+  - title: "Button DOUBLE-PRESSED Value"
+    name: butdouble
+    description: "Msg value for DOUBLE"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      minLength: 1
+      maxLength: 10
+      default: "double"
+  - title: "Button TRIPLE-PRESSED Value"
+    name: but3x
+    description: "Msg value for TRIPLE"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      minLength: 1
+      maxLength: 10
+      default: "triple"
+  - title: "Publish Button State Changes"
+    name: publish
+    description: "Enable/Disable"
+    required: true
+    preferenceType: boolean
+    definition:
+      default: false
+  - title: "Publish Topic"
+    name: pubtopic
+    description: "Topic String"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "xxxxx/xxxxx"
+  - title: "Publish QoS"
+    name: qos
+    description: "Quality of Service"
+    required: true
+    preferenceType: enumeration
+    definition:
+      options:
+        qos0: "0"
+        qos1: "1"
+        qos2: "2"
+      default: qos1

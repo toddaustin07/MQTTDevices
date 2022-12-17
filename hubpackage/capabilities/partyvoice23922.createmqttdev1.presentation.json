@@ -17,6 +17,11 @@
                             "type": "active"
                         },
                         {
+                            "key": "Dimmer",
+                            "value": "Dimmer",
+                            "type": "active"
+                        },
+                        {
                             "key": "Button",
                             "value": "Momentary Button",
                             "type": "active"
@@ -49,6 +54,11 @@
                             "type": "active"
                         },
                         {
+                            "key": "Dimmer",
+                            "value": "Dimmer",
+                            "type": "active"
+                        },
+                        {
                             "key": "Button",
                             "value": "Momentary Button",
                             "type": "active"
@@ -77,6 +87,6 @@
         "conditions": [],
         "actions": []
     },
-    "id": "partyvoice23922.createmqttdev",
+    "id": "partyvoice23922.createmqttdev1",
     "version": 1
 }

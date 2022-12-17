@@ -24,6 +24,9 @@ local cosock = require "cosock"
 local socket = require "cosock.socket"          -- just for time
 
 
+local subs = require "subscriptions"
+
+
 local function publish_message(device, payload)
 
   if client and payload then
@@ -46,10 +49,9 @@ local function handle_refresh(driver, device, command)
   log.info ('Refresh requested')
 
   if device.device_network_id:find('Master', 1, 'plaintext') then
-    client_reset_inprogress = true
     init_mqtt(device)
   else
-    mqtt_subscribe(device)
+    subs.mqtt_subscribe(device)
   end
 
 end
@@ -104,15 +106,15 @@ local function handle_switch(driver, device, command)
   
   device:emit_event(capabilities.switch.switch(command.command))
 
-  if device.preferences.publish == true then
-    
-    local payload
-    
+  local dtype = device.device_network_id:match('MQTT_(.+)_+')
+  
+  if dtype == 'Switch' and device.preferences.publish == true then
+      
     local cmdmap = {
                       ['on'] = device.preferences.switchon,
                       ['off'] = device.preferences.switchoff
                    }
-                   
+           
     publish_message(device, cmdmap[command.command])
 
   end
@@ -153,6 +155,7 @@ local function handle_alarm(driver, device, command)
   end
 end
 
+
 local function handle_dimmer(driver, device, command)
 
   log.info ('Dimmmer value changed to ', command.args.level)
@@ -166,6 +169,14 @@ local function handle_dimmer(driver, device, command)
   end
     
   device:emit_event(capabilities.switchLevel.level(dimmerlevel))
+  
+  if device:supports_capability_by_id('switch') then
+    if dimmerlevel > 0 then
+      device:emit_event(capabilities.switch.switch('on'))
+    else
+      device:emit_event(capabilities.switch.switch('off'))
+    end
+  end
   
   if device.preferences.publish == true then
     
@@ -185,10 +196,18 @@ local function handle_lock(driver, device, command)
   device:emit_event(capabilities.lock.lock(attrmap[command.command]))
   
   if device.preferences.publish == true then
-    local cmdmap = {
-                      ['lock'] = device.preferences.locklocked,
-                      ['unlock'] = device.preferences.lockunlocked
-                   }
+    local cmdmap
+    if device.preferences.locklock then
+      cmdmap = {
+                  ['lock'] = device.preferences.locklock,
+                  ['unlock'] = device.preferences.lockunlock
+               }
+    else
+      cmdmap = {
+                  ['lock'] = device.preferences.locklocked,
+                  ['unlock'] = device.preferences.lockunlocked
+               }
+    end
                    
     publish_message(device, cmdmap[command.command])
     
@@ -205,6 +224,25 @@ local function handle_volume(driver, device, command)
   end
 end
 
+
+local function handle_tempset(driver, device, command)
+
+  local tempunit = 'C'
+  if device.preferences.dtempunit == 'fahrenheit' then
+    tempunit = 'F'
+  end
+  
+  device:emit_event(capabilities.temperatureMeasurement.temperature({value=command.args.temp, unit=tempunit}))
+  
+  device:emit_event(cap_tempset.vtemp({value=command.args.temp, unit=tempunit}))
+  
+  if device.preferences.publish == true then
+    publish_message(device, tostring(command.args.temp))
+  end
+
+end
+
+
 return  {
           handle_refresh = handle_refresh,
           handle_createdevice = handle_createdevice,
@@ -214,5 +252,6 @@ return  {
           handle_dimmer = handle_dimmer,
           handle_lock = handle_lock,
           handle_volume = handle_volume,
+          handle_tempset = handle_tempset,
         }
         

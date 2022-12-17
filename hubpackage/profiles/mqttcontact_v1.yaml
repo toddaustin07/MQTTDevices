@@ -1,0 +1,61 @@
+name: mqttcontact.v1
+components:
+  - id: main
+    capabilities:
+      - id: contactSensor
+        version: 1
+      - id: partyvoice23922.status
+        version: 1
+      - id: partyvoice23922.refresh
+        version: 1
+    categories:
+      - name: Contact
+preferences:
+  - title: "Subscribe Topic"
+    name: subTopic
+    description: "Topic Name"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "xxxxx/xxxxx"
+  - title: "Expected Message Format"
+    name: format
+    description: "Select type"
+    required: true
+    preferenceType: enumeration
+    definition:
+      options:
+        json: "JSON"
+        string: "String"
+      default: string
+  - title: "JSON Key"
+    name: jsonelement
+    description: "Data element"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      minLength: 2
+      maxLength: 64
+      default: "Contact.Action"
+  - title: "Contact OPEN Value"
+    name: contactopen
+    description: "Msg value for OPEN"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      minLength: 1
+      maxLength: 10
+      default: "open"
+  - title: "Contact CLOSED Value"
+    name: contactclosed
+    description: "Msg value for CLOSED"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      minLength: 1
+      maxLength: 10
+      default: "closed"
