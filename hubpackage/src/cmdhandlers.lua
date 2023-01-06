@@ -243,6 +243,29 @@ local function handle_tempset(driver, device, command)
 end
 
 
+local function handle_humidityset(driver, device, command)
+
+  device:emit_event(capabilities.relativeHumidityMeasurement.humidity(command.args.humidity))
+  
+  device:emit_event(cap_humidityset.vhumidity(command.args.humidity))
+  
+  if device.preferences.publish == true then
+    publish_message(device, tostring(command.args.humidity))
+  end
+
+end
+
+local function handle_reset(driver, device, command)
+
+  log.info ('Energy Meter Reset requested')
+  
+  device:emit_event(cap_reset.cmdSelect(' ', { visibility = { displayed = false }}))
+  
+  device:emit_event(capabilities.energyMeter.energy({value = 0, unit = "kWh" }))
+  
+end
+
+
 return  {
           handle_refresh = handle_refresh,
           handle_createdevice = handle_createdevice,
@@ -253,5 +276,7 @@ return  {
           handle_lock = handle_lock,
           handle_volume = handle_volume,
           handle_tempset = handle_tempset,
+          handle_humidityset = handle_humidityset,
+          handle_reset = handle_reset,
         }
         

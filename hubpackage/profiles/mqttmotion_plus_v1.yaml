@@ -1,0 +1,67 @@
+name: mqttmotion_plus.v1
+components:
+  - id: main
+    capabilities:
+      - id: motionSensor
+        version: 1
+      - id: illuminanceMeasurement
+        version: 1
+      - id: battery
+        version: 1
+      - id: partyvoice23922.status
+        version: 1
+      - id: partyvoice23922.refresh
+        version: 1
+    categories:
+      - name: Motion
+metadata:
+  ocfDeviceType: x.com.st.d.sensor.motion
+preferences:
+  - title: "Subscribe Topic"
+    name: subTopic
+    description: "Topic Name"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "xxxxx/xxxxx"
+  - title: "Motion JSON Key"
+    name: jsonelement
+    description: "Data element"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "motion.state"
+  - title: "Motion ACTIVE Value"
+    name: motionactive
+    description: "Msg value for ACTIVE"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "active"
+  - title: "Motion INACTIVE Value"
+    name: motioninactive
+    description: "Msg value for INACTIVE"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "inactive"
+  - title: "Lightlevel JSON Key"
+    name: lightkey
+    description: "Data element"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "light.level"
+  - title: "Battery JSON Key"
+    name: batterykey
+    description: "Data element"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "battery.level"

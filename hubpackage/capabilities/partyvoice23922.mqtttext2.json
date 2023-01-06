@@ -1,0 +1,25 @@
+{
+    "id": "partyvoice23922.mqtttext2",
+    "version": 1,
+    "status": "proposed",
+    "name": "mqtttext2",
+    "ephemeral": false,
+    "attributes": {
+        "text": {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "type": "string"
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "value"
+                ]
+            },
+            "enumCommands": []
+        }
+    },
+    "commands": {}
+}

@@ -1,0 +1,45 @@
+name: mqttcreator.v4
+components:
+  - id: main
+    capabilities:
+      - id: partyvoice23922.createmqttdev4
+        version: 1
+      - id: partyvoice23922.status
+        version: 1
+      - id: partyvoice23922.topiclist
+        version: 1
+      - id: partyvoice23922.refresh
+        version: 1
+    categories:
+      - name: Others
+preferences:
+  - title: "MQTT Broker Username"
+    name: userid
+    description: "Authentication Username"
+    required: false
+    preferenceType: string
+    definition:
+      stringType: text
+      minLength: 3
+      maxLength: 32
+      default: "xxxxx"
+  - title: "MQTT Broker Password"
+    name: password
+    description: "Authentication PW"
+    required: false
+    preferenceType: string
+    definition:
+      stringType: text
+      minLength: 3
+      maxLength: 32
+      default: "xxxxx"
+  - title: "MQTT Broker IP Address"
+    name: broker
+    description: "Broker Address"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      minLength: 7
+      maxLength: 15
+      default: "192.168.1.xxx"

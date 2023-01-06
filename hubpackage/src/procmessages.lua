@@ -91,6 +91,21 @@ local function getJSONElement(key, jsonstring)
 end
 
 
+local function motionplus(device, msg)
+
+  local lightvalue = getJSONElement(device.preferences.lightkey, msg)
+  if type(lightvalue) == 'number' then
+    device:emit_event(capabilities.illuminanceMeasurement.illuminance(lightvalue))
+  end
+  
+  local batteryvalue = getJSONElement(device.preferences.batterykey, msg)
+  if type(batteryvalue) == 'number' then
+    device:emit_event(capabilities.battery.battery(batteryvalue))
+  end
+
+end
+
+
 local function process_message(topic, msg)
 
   log.debug (string.format("Processing received data msg: %s", msg))
@@ -105,8 +120,9 @@ local function process_message(topic, msg)
 
       log.debug ('Match for', device.label)
       local value
+      local dtype = device.device_network_id:match('MQTT_(.+)_+')
 
-      if device.preferences.format == 'json' then
+      if (device.preferences.format == 'json') or (device.preferences.format == nil) then
       
         value = getJSONElement(device.preferences.jsonelement, msg)
       
@@ -117,9 +133,22 @@ local function process_message(topic, msg)
       end
 
       if value ~= nil then
-        local dtype = device.device_network_id:match('MQTT_(.+)_+')
+        
+        if (dtype == 'Motion') or (dtype == 'MotionPlus') then
+          if value == device.preferences.motionactive then
+            device:emit_event(capabilities.motionSensor.motion.active())
+          elseif value == device.preferences.motioninactive then
+            device:emit_event(capabilities.motionSensor.motion.inactive())
+          else
+            log.warn ('Unconfigured motion value received')
+          end
+        end
 
-        if dtype == 'Switch' then
+        if dtype == 'MotionPlus' then
+        
+          motionplus(device, msg)
+
+        elseif dtype == 'Switch' then
           if value == device.preferences.switchon then
             device:emit_event(capabilities.switch.switch.on())
           elseif value == device.preferences.switchoff then
@@ -148,15 +177,6 @@ local function process_message(topic, msg)
             device:emit_event(capabilities.contactSensor.contact.closed())
           else
             log.warn ('Unconfigured contact value received')
-          end
-          
-        elseif dtype == 'Motion' then
-          if value == device.preferences.motionactive then
-            device:emit_event(capabilities.motionSensor.motion.active())
-          elseif value == device.preferences.motioninactive then
-            device:emit_event(capabilities.motionSensor.motion.inactive())
-          else
-            log.warn ('Unconfigured motion value received')
           end
           
         elseif dtype == 'Alarm' then
@@ -270,7 +290,24 @@ local function process_message(topic, msg)
           
           device:emit_event(capabilities.temperatureMeasurement.temperature({value = tempvalue, unit = tempunit}))
           device:emit_event(cap_tempset.vtemp({value = tempvalue, unit = tempunit}))
+          
+        elseif dtype == 'Humidity' then
+          value = tonumber(value)
+          if type(value) == 'number' then
+            device:emit_event(capabilities.relativeHumidityMeasurement.humidity(value))
+            device:emit_event(cap_humidityset.vhumidity(value))
+          end
+          
+        elseif dtype == 'Energy' then
+          device:emit_event(capabilities.energyMeter.energy({value = tonumber(value), unit = device.preferences.units }))
+          
+        elseif dtype == 'Text' then
+          device:emit_event(cap_text.text(value))
+          
         end
+        
+      elseif dtype == 'MotionPlus' then
+        motionplus(device, msg)
       else
         log.warn ('No valid value found in message; ignoring')
       end

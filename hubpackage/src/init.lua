@@ -50,6 +50,10 @@ typemeta =  {
               ['Sound']        = { ['profile'] = 'mqttsound.v1',         ['created'] = 0, ['switch'] = false },
               ['Water']        = { ['profile'] = 'mqttwater.v1',         ['created'] = 0, ['switch'] = false },
               ['Temperature']  = { ['profile'] = 'mqtttemp.v1',          ['created'] = 0, ['switch'] = false },
+              ['Humidity']     = { ['profile'] = 'mqtthumidity.v1',      ['created'] = 0, ['switch'] = false },
+              ['MotionPlus']   = { ['profile'] = 'mqttmotion_plus.v1',   ['created'] = 0, ['switch'] = false },
+              ['Energy']       = { ['profile'] = 'mqttenergy.v1',        ['created'] = 0, ['switch'] = false },
+              ['Text']         = { ['profile'] = 'mqtttext.v1b',         ['created'] = 0, ['switch'] = false },
             }
 
 -- Module variables
@@ -58,16 +62,20 @@ local initialized = false
 local clearcreatemsg_timer
 local shutdown_requested = false
 local client_reset_inprogress = false
-local MASTERPROFILE = 'mqttcreator.v2c'
+local MASTERPROFILE = 'mqttcreator.v4'
 
 
 -- Custom Capabilities
-cap_createdev = capabilities["partyvoice23922.createmqttdev3"]
+cap_createdev = capabilities["partyvoice23922.createmqttdev4"]
 cap_status = capabilities["partyvoice23922.status"]
 cap_topiclist = capabilities["partyvoice23922.topiclist"]
 cap_refresh = capabilities["partyvoice23922.refresh"]
 
 cap_tempset = capabilities["partyvoice23922.vtempset"]
+cap_humidityset = capabilities["partyvoice23922.vhumidityset"]
+cap_text = capabilities["partyvoice23922.mqtttext2"]
+
+cap_reset = capabilities["partyvoice23922.resetselect"]
 
 
 
@@ -243,6 +251,10 @@ local function device_added (driver, device)
 
     local dtype = device.device_network_id:match('MQTT_(.+)_+')
 
+    if (dtype == 'Motion') or (dtype == 'MotionPlus') then
+      device:emit_event(capabilities.motionSensor.motion('inactive'))
+    end
+    
     if dtype == 'Switch' then
       device:emit_event(capabilities.switch.switch('off'))
     elseif dtype == 'Dimmer' then
@@ -250,8 +262,10 @@ local function device_added (driver, device)
       device:emit_event(capabilities.switch.switch('off'))
     elseif dtype == 'Contact' then
       device:emit_event(capabilities.contactSensor.contact('closed'))
-    elseif dtype == 'Motion' then
-      device:emit_event(capabilities.motionSensor.motion('inactive'))
+    elseif dtype == 'MotionPlus' then
+      device:emit_event(capabilities.illuminanceMeasurement.illuminance(0))
+      device:emit_event(capabilities.battery.battery(0))
+      
     elseif dtype == 'Button' then
       local supported_values =  {
                                   capabilities.button.button.pushed.NAME,
@@ -277,6 +291,14 @@ local function device_added (driver, device)
     elseif dtype == 'Temperature' then
       device:emit_event(capabilities.temperatureMeasurement.temperature(20))
       device:emit_event(cap_tempset.vtemp({value=20, unit='C'}))
+    elseif dtype == 'Humidity' then
+      device:emit_event(capabilities.relativeHumidityMeasurement.humidity(0))
+      device:emit_event(cap_humidityset.vhumidity(0))
+    elseif dtype == 'Energy' then
+      device:emit_event(capabilities.energyMeter.energy({value = 0, unit = "kWh" }))
+      device:emit_event(cap_reset.cmdSelect(' '))
+    elseif dtype == 'Text' then
+      device:emit_event(cap_text.text(' '))
     end
 
     creator_device:emit_event(cap_createdev.deviceType('Device created'))
@@ -410,7 +432,7 @@ local function discovery_handler(driver, _, should_continue)
 
     local MFG_NAME = 'SmartThings Community'
     local MODEL = 'MQTTCreatorV1'
-    local VEND_LABEL = 'MQTT Device Creator V1b' --update; change for testing
+    local VEND_LABEL = 'MQTT Device Creator V1.1' --update; change for testing
     local ID = 'MQTTDev_Masterv1'               --change for testing
     local PROFILE = MASTERPROFILE           --update; change for testing
 
@@ -460,6 +482,9 @@ thisDriver = Driver("MQTT Devices", {
     [cap_tempset.ID] = {
       [cap_tempset.commands.setvTemp.NAME] = cmd.handle_tempset,
     },
+    [cap_humidityset.ID] = {
+      [cap_humidityset.commands.setvHumidity.NAME] = cmd.handle_humidityset,
+    },
     [capabilities.switch.ID] = {
       [capabilities.switch.commands.on.NAME] = cmd.handle_switch,
       [capabilities.switch.commands.off.NAME] = cmd.handle_switch,
@@ -482,6 +507,12 @@ thisDriver = Driver("MQTT Devices", {
     },
     [capabilities.audioVolume.ID] = {
       [capabilities.audioVolume.commands.setVolume.NAME] = cmd.handle_volume,
+    },
+    [capabilities.energyMeter.ID] = {
+      [capabilities.energyMeter.commands.resetEnergyMeter.NAME] = cmd.handle_reset,
+    },
+    [cap_reset.ID] = {
+      [cap_reset.commands.setSelect.NAME] = cmd.handle_reset,
     },
   }
 })
