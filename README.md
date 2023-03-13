@@ -82,7 +82,7 @@ Here is an example Rule for doing so:
 									"capability": "partyvoice23922.mqttpublish",
 									"command": "publish",
 									"arguments": [
-										{ "string": "mytesttopic/custommessages"	},
+										{ string": "mytesttopic/custommessages"	},
 										{ "string": "This is my custom message" },
 										{ "integer": 1 }
 									]
