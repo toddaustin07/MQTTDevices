@@ -1,9 +1,11 @@
 # MQTTDevices
-SmartThings Edge driver for creating MQTT-connected devices.  These devices will update their states based on MQTT messages.  No cloud connection is used, so everything is executed locally.
+SmartThings Edge driver for creating MQTT-connected devices.  These devices will update their states based on MQTT messages.  No cloud connection is used, so everything is executed locally.  
 
-Currently supported device types:  switch, button, contact, motion, motionPlus, alarm, dimmer, vibration, lock, presence, sound, moisture, temperature, humidity, energy, text.  More can be added - just ask!
+Currently supported device types:  switch, button, contact, motion, motionPlus, alarm, dimmer, vibration, lock, presence, sound, moisture, temperature, humidity, energy, text, numeric.  More can be added - just ask!
 
-Switch, button, alarm, dimmer, lock, temperature, and humidity devices can also be configured to publish MQTT messages when state changes from within SmartThings (i.e., manually via mobile app or automations).
+Switch, button, alarm, dimmer, lock, temperature, humidity, energy, and numeric devices can also be configured to publish MQTT messages when state changes from within SmartThings (i.e., manually via mobile app or automations).
+
+There is also a command provided for building Rules that can publish *any* on-the-fly MQTT message to a given topic.
 
 ## Use Cases
 If you have a device or application that publishes messages using MQTT, then you can use this driver to easily integrate into SmartThings.  
@@ -16,7 +18,11 @@ If you have a device or application that responds to messages from MQTT, then yo
 ## Installation / Configuration
 Install driver using [this channel invite link](https://bestow-regional.api.smartthings.com/invite/Q1jP7BqnNNlL).  Enroll your hub and choose "MQTT Devices V1" from the list of drivers to install.
 
-Once available on your hub, use the SmartThings mobile app to initiate an *Add device / Scan for nearby devices*. A new device called 'MQTT Device Creator' will be found in your 'No room assigned' room.  Open the device and go to the device Settings menu (3 vertical dot menu in upper right corner of Controls tab).  Provide the username and password (if required) for your MQTT broker, and the IP address of the MQTT broker.  Return to the Controls screen and the Status field there will indicate if the driver is now connected to the MQTT broker.
+Once available on your hub, use the SmartThings mobile app to initiate an *Add device / Scan for nearby devices*. A new device called 'MQTT Device Creator' will be found in your 'No room assigned' room.  Open the device and go to the device Settings menu (3 vertical dot menu in upper right corner of Controls tab).  Provide the username and password (if required) for your MQTT broker, and the IP address of the MQTT broker.  
+
+An additional option - 'Reconnection wait' - can be configured for the retry frequency when the connection to the broker is lost.  This defaults to 20 seconds but can be shortened or lengthened based on needs.
+
+Return to the Controls screen and the Status field there will indicate if the driver is now connected to the MQTT broker.
 
 ## Usage
 ### MQTT Device Creator device
@@ -38,6 +44,58 @@ Once a device is created using the master device, go to the respective device Se
 The last three options listed above (Publish-related) are available only for switch, button, alarm, and dimmer.
 
 Once the device is successfully subscribed to the broker, the status field on the device Controls screen will show 'Subscribed' and the list shown in the master device will be updated with the topic.
+
+## Publishing On-the-fly Messages
+The Creator device supports a command that can be used from a Rule to publish any MQTT message to a given topic, with a given QoS.  This is accomplished by a 'publish' command to the **partyvoice23922.mqttpublish** capability in the creator device.  Three command arguments are provided (in order): topic, message, QoS.
+
+Here is an example Rule for doing so:
+```
+{
+	"name": "Custom MQTT",
+	"actions": [
+		{
+			"if": {
+				"equals": {
+					"left": {
+						"device": {
+							"devices": [
+								"3228bb6c-a115-4280-b3e1-f3a4224442d2"
+							],
+							"component": "main",
+							"capability": "button",
+							"attribute": "button"
+						}
+					},
+					"right": {
+						"string": "pushed"
+					}
+				},
+				"then": [
+					{
+						"command": {
+							"devices": [
+								"7a31fbae-58e9-45b8-a0c6-777ca1eed274"
+							],
+							"commands": [
+								{
+									"component": "main",
+									"capability": "partyvoice23922.mqttpublish",
+									"command": "publish",
+									"arguments": [
+										{ "string": "mytesttopic/custommessages"	},
+										{ "string": "This is my custom message" },
+										{ "integer": 1 }
+									]
+								}
+							]
+						}
+					}
+				]
+			}
+		}
+	]
+}
+```
 
 ### Additional notes
 * All device state changes are available for automations
