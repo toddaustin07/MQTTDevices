@@ -30,7 +30,7 @@ This 'master' device is used to create the desired device types (e.g. switch, bu
 
 The MQTT Device Creator will also display a list of the MQTT topics that are currently subscribed to across all created devices.
 
-### Configuration of created MQTT devices (switch, button, contact, motion, alarm, dimmer, temperature)
+### Configuration of created MQTT devices
 Once a device is created using the master device, go to the respective device Settings screen to configure the MQTT topic for the device to respond to, as well as other optional preferences:
 
 * **Subscribe Topic**: MQTT topic in the form of xxxx/xxxx that this device will respond to
@@ -41,7 +41,7 @@ Once a device is created using the master device, go to the respective device Se
 * **Publish Topic**: If publish state changes is enabled, then provide here the MQTT topic to publish the state change to
 * **Publish QoS**: Select 0, 1, or 2 for the MQTT Quality of Service (QoS) level to use when publishing the state change
 
-The last three options listed above (Publish-related) are available only for switch, button, alarm, and dimmer.
+The last three options listed above (Publish-related) are available only for switch, button, alarm, dimmer, energy, numeric.
 
 Once the device is successfully subscribed to the broker, the status field on the device Controls screen will show 'Subscribed' and the list shown in the master device will be updated with the topic.
 
