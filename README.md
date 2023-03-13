@@ -107,3 +107,4 @@ Here is an example Rule for doing so:
 * Unique broker per device is not supported
 * Momentary button devices support 4 types of received messages: button pressed, double-push, triple-push, and button held
 * Values published: For Switch, the respective ON/OFF values configured in Settings are sent; for Button the button PRESSED value configured in Settings is sent
+* For the Numeric device, messages will only be published when the number value is updated in SmartThings, at which time both the number value and unit text will be included in the message; if using automations, it's recommended therefore that unit text be updated first, then the number value
