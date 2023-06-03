@@ -1,6 +1,10 @@
 {
     "dashboard": {
-        "states": [],
+        "states": [
+            {
+                "label": "{{text.value}}"
+            }
+        ],
         "actions": []
     },
     "detailView": [

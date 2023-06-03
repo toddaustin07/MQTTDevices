@@ -1,0 +1,25 @@
+id: partyvoice23922.unitfield
+version: 1
+status: proposed
+name: unitfield
+ephemeral: false
+attributes:
+  unittext:
+    schema:
+      type: object
+      properties:
+        value:
+          type: string
+      additionalProperties: false
+      required:
+        - value
+    setter: setUnit
+    enumCommands: []
+commands:
+  setUnit:
+    name: setUnit
+    arguments:
+      - name: unittext
+        optional: false
+        schema:
+          type: string

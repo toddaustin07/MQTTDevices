@@ -1,0 +1,53 @@
+{
+    "id": "partyvoice23922.setenergy",
+    "version": 1,
+    "status": "proposed",
+    "name": "setenergy",
+    "ephemeral": false,
+    "attributes": {
+        "energyval": {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                    },
+                    "unit": {
+                        "type": "string",
+                        "enum": [
+                            "Wh",
+                            "kWh",
+                            "mWh",
+                            "kVAh"
+                        ],
+                        "default": "kWh"
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "value"
+                ]
+            },
+            "setter": "setEnergy",
+            "enumCommands": []
+        }
+    },
+    "commands": {
+        "setEnergy": {
+            "name": "setEnergy",
+            "arguments": [
+                {
+                    "name": "energyval",
+                    "optional": false,
+                    "schema": {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                    }
+                }
+            ]
+        }
+    }
+}

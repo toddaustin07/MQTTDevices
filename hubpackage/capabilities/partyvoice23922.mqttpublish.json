@@ -1,0 +1,38 @@
+{
+    "id": "partyvoice23922.mqttpublish",
+    "version": 1,
+    "status": "proposed",
+    "name": "mqttpublish",
+    "ephemeral": false,
+    "attributes": {},
+    "commands": {
+        "publish": {
+            "name": "publish",
+            "arguments": [
+                {
+                    "name": "topic",
+                    "optional": false,
+                    "schema": {
+                        "type": "string"
+                    }
+                },
+                {
+                    "name": "message",
+                    "optional": true,
+                    "schema": {
+                        "type": "string"
+                    }
+                },
+                {
+                    "name": "qos",
+                    "optional": true,
+                    "schema": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2
+                    }
+                }
+            ]
+        }
+    }
+}

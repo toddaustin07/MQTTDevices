@@ -1,5 +1,5 @@
 --[[
-  Copyright 2022 Todd Austin
+  Copyright 2022, 2023 Todd Austin
 
   Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
   except in compliance with the License. You may obtain a copy of the License at:
@@ -35,10 +35,11 @@ local mqtt = require "mqtt"
 thisDriver = {}               -- used in the MQTT client module: TODO- pass it in at initialization
 SUBSCRIBED_TOPICS = {}        -- referenced by other modules
 client = nil                  -- referenced by other modules
+client_reset_inprogress = false
 creator_device = {}           -- referenced by other modules
 
 typemeta =  {
-              ['Switch']       = { ['profile'] = 'mqttswitch.v2',        ['created'] = 0, ['switch'] = true  },
+              ['Switch']       = { ['profile'] = 'mqttswitch.v2b',       ['created'] = 0, ['switch'] = true  },
               ['Button']       = { ['profile'] = 'mqttbutton.v2',        ['created'] = 0, ['switch'] = false },
               ['Contact']      = { ['profile'] = 'mqttcontact.v2',       ['created'] = 0, ['switch'] = false },
               ['Motion']       = { ['profile'] = 'mqttmotion.v2',        ['created'] = 0, ['switch'] = false },
@@ -49,11 +50,15 @@ typemeta =  {
               ['Presence']     = { ['profile'] = 'mqttpresence.v1',      ['created'] = 0, ['switch'] = false },
               ['Sound']        = { ['profile'] = 'mqttsound.v1',         ['created'] = 0, ['switch'] = false },
               ['Water']        = { ['profile'] = 'mqttwater.v1',         ['created'] = 0, ['switch'] = false },
-              ['Temperature']  = { ['profile'] = 'mqtttemp.v1',          ['created'] = 0, ['switch'] = false },
+              ['Temperature']  = { ['profile'] = 'mqtttemp.v2',          ['created'] = 0, ['switch'] = false },
               ['Humidity']     = { ['profile'] = 'mqtthumidity.v1',      ['created'] = 0, ['switch'] = false },
               ['MotionPlus']   = { ['profile'] = 'mqttmotion_plus.v1',   ['created'] = 0, ['switch'] = false },
-              ['Energy']       = { ['profile'] = 'mqttenergy.v1',        ['created'] = 0, ['switch'] = false },
-              ['Text']         = { ['profile'] = 'mqtttext.v1b',         ['created'] = 0, ['switch'] = false },
+              ['Energy']       = { ['profile'] = 'mqttenergy.v3d',       ['created'] = 0, ['switch'] = false },
+              ['Text']         = { ['profile'] = 'mqtttext.v2',          ['created'] = 0, ['switch'] = false },
+              ['Numeric']      = { ['profile'] = 'mqttnumeric.v1',       ['created'] = 0, ['switch'] = false },
+              ['CO2']          = { ['profile'] = 'mqttCO2.v1',           ['created'] = 0, ['switch'] = false },
+              ['Shade']        = { ['profile'] = 'mqttshade.v1b',        ['created'] = 0, ['switch'] = false },
+              ['Battery']      = { ['profile'] = 'mqttbattery.v1',       ['created'] = 0, ['switch'] = false },
             }
 
 -- Module variables
@@ -61,19 +66,28 @@ typemeta =  {
 local initialized = false
 local clearcreatemsg_timer
 local shutdown_requested = false
-local client_reset_inprogress = false
-local MASTERPROFILE = 'mqttcreator.v4'
+local MASTERPROFILE = 'mqttcreator.v7'
+local MASTERLABEL = 'MQTT Device Creator V1.7'
+local CREATECAPID = 'partyvoice23922.createmqttdev7'
 
 
 -- Custom Capabilities
-cap_createdev = capabilities["partyvoice23922.createmqttdev4"]
+cap_createdev_new = capabilities[CREATECAPID]
+cap_createdev_old = capabilities["partyvoice23922.createmqttdev6"]
+cap_createdev = cap_createdev_old
+
 cap_status = capabilities["partyvoice23922.status"]
 cap_topiclist = capabilities["partyvoice23922.topiclist"]
 cap_refresh = capabilities["partyvoice23922.refresh"]
+cap_custompublish = capabilities["partyvoice23922.mqttpublish"]
 
 cap_tempset = capabilities["partyvoice23922.vtempset"]
 cap_humidityset = capabilities["partyvoice23922.vhumidityset"]
 cap_text = capabilities["partyvoice23922.mqtttext2"]
+cap_setenergy = capabilities["partyvoice23922.setenergy"]
+cap_setpower = capabilities["partyvoice23922.setpower"]
+cap_numfield = capabilities["partyvoice23922.numberfield"]
+cap_unitfield = capabilities["partyvoice23922.unitfield"]
 
 cap_reset = capabilities["partyvoice23922.resetselect"]
 
@@ -103,6 +117,8 @@ local function create_MQTT_client(device)
     end
   end
 
+  SUBSCRIBED_TOPICS = {}
+
   -- create mqtt client
   client = mqtt.client(connect_args)
 
@@ -111,11 +127,13 @@ local function create_MQTT_client(device)
       if connack.rc ~= 0 then
         log.error ("connection to broker failed:", connack:reason_string(), connack)
         device:emit_event(cap_status.status('Failed to Connect to Broker'))
+        client = nil
         return
       end
       log.info("Connected to MQTT broker:", connack) -- successful connection
       device:emit_event(cap_status.status('Connected to Broker'))
-      thisDriver:call_with_delay(3, schedule_subscribe)
+      client_reset_inprogress = false
+      thisDriver:call_with_delay(1, schedule_subscribe)
     end,
 
     message = function(msg)
@@ -131,6 +149,7 @@ local function create_MQTT_client(device)
 
     error = function(err)
       log.error("MQTT client error:", err)
+      client = nil
     end,
   }
 
@@ -176,6 +195,7 @@ function init_mqtt(device)
 
     cosock.spawn(function()
       device:set_field('client_thread', true)
+      
       while true do
         local ok, err = mqtt.run_sync(client)
         client = nil
@@ -185,17 +205,15 @@ function init_mqtt(device)
             device:emit_event(cap_status.status('Driver shutdown'))
             return
           end
-          if string.lower(err):find('connection refused', 1, 'plaintext') or err == "closed" then
+          if string.lower(err):find('connection refused', 1, 'plaintext') or (err == "closed") or 
+             string.lower(err):find('no route to host', 1, 'plaintext') then
             device:emit_event(cap_status.status('Reconnecting...'))
             device:emit_event(cap_topiclist.topiclist(' ', { visibility = { displayed = false } }))
             client_reset_inprogress = true
-            repeat
-              -- pause, then try to create new mqtt client
-              cosock.socket.sleep(15)
-              log.info ('Attempting to reconnect to broker...')
-              client = create_MQTT_client(device)
-            until client
-            client_reset_inprogress = false
+            -- pause, then try to create new mqtt client
+            cosock.socket.sleep(creator_device.preferences.reconndelay or 15)
+            log.info ('Attempting to reconnect to broker...')
+            client = create_MQTT_client(device)
           else
             break
           end
@@ -203,6 +221,7 @@ function init_mqtt(device)
           log.error ('Unexpected return from MQTT client:', ok, err)
         end
       end
+      
       device:set_field('client_thread', false)
     end, 'MQTT synch mode')
 
@@ -211,7 +230,7 @@ function init_mqtt(device)
     
   elseif client == nil then
     log.error ('Create MQTT Client failed')
-    thisDriver:call_with_delay(15, init_mqtt)
+    thisDriver:call_with_delay(creator_device.preferences.reconndelay or 15, init_mqtt)
   end
 end
 
@@ -227,7 +246,14 @@ local function device_init(driver, device)
   if device.device_network_id:find('Master', 1, 'plaintext') then
   
     creator_device = device
-    device:emit_event(cap_createdev.deviceType(' ', { visibility = { displayed = false } }))
+    
+    if device:supports_capability_by_id(CREATECAPID) then
+      cap_createdev = cap_createdev_new
+    else
+      cap_createdev = cap_createdev_old
+    end
+    
+    device:emit_event(cap_createdev.deviceType(' '))
     device:emit_event(cap_status.status('Not Connected'))
     device:emit_event(cap_topiclist.topiclist(' ', { visibility = { displayed = false } }))
     
@@ -264,7 +290,7 @@ local function device_added (driver, device)
       device:emit_event(capabilities.contactSensor.contact('closed'))
     elseif dtype == 'MotionPlus' then
       device:emit_event(capabilities.illuminanceMeasurement.illuminance(0))
-      device:emit_event(capabilities.battery.battery(0))
+      device:emit_event(capabilities.battery.battery(100))
       
     elseif dtype == 'Button' then
       local supported_values =  {
@@ -297,8 +323,21 @@ local function device_added (driver, device)
     elseif dtype == 'Energy' then
       device:emit_event(capabilities.energyMeter.energy({value = 0, unit = "kWh" }))
       device:emit_event(cap_reset.cmdSelect(' '))
+      device:emit_event(capabilities.powerMeter.power(0))
+      device:emit_event(cap_setenergy.energyval(0))
+      device:emit_event(cap_setpower.powerval(0))
     elseif dtype == 'Text' then
       device:emit_event(cap_text.text(' '))
+    elseif dtype == 'Numeric' then
+      device:emit_event(cap_numfield.numberval(0))
+      device:emit_event(cap_unitfield.unittext(' '))
+    elseif dtype == 'CO2' then
+      device:emit_event(capabilities.carbonDioxideMeasurement.carbonDioxide(0))
+    elseif dtype == 'Shade' then
+      device:emit_event(capabilities.windowShade.windowShade('open'))
+      device:emit_event(capabilities.windowShadeLevel.shadeLevel(100))
+    elseif dtype == 'Battery' then
+      device:emit_event(capabilities.battery.battery(100))
     end
 
     creator_device:emit_event(cap_createdev.deviceType('Device created'))
@@ -432,7 +471,7 @@ local function discovery_handler(driver, _, should_continue)
 
     local MFG_NAME = 'SmartThings Community'
     local MODEL = 'MQTTCreatorV1'
-    local VEND_LABEL = 'MQTT Device Creator V1.1' --update; change for testing
+    local VEND_LABEL = MASTERLABEL           --update; change for testing
     local ID = 'MQTTDev_Masterv1'               --change for testing
     local PROFILE = MASTERPROFILE           --update; change for testing
 
@@ -473,8 +512,11 @@ thisDriver = Driver("MQTT Devices", {
   },
   driver_lifecycle = shutdown_handler,
   capability_handlers = {
-    [cap_createdev.ID] = {
-      [cap_createdev.commands.setDeviceType.NAME] = cmd.handle_createdevice,
+    [cap_createdev_new.ID] = {
+      [cap_createdev_new.commands.setDeviceType.NAME] = cmd.handle_createdevice,
+    },
+    [cap_createdev_old.ID] = {
+      [cap_createdev_old.commands.setDeviceType.NAME] = cmd.handle_createdevice,
     },
     [cap_refresh.ID] = {
       [cap_refresh.commands.push.NAME] = cmd.handle_refresh,
@@ -511,12 +553,35 @@ thisDriver = Driver("MQTT Devices", {
     [capabilities.energyMeter.ID] = {
       [capabilities.energyMeter.commands.resetEnergyMeter.NAME] = cmd.handle_reset,
     },
+    [capabilities.windowShade.ID] = {
+      [capabilities.windowShade.commands.open.NAME] = cmd.handle_shade,
+      [capabilities.windowShade.commands.close.NAME] = cmd.handle_shade,
+      [capabilities.windowShade.commands.pause.NAME] = cmd.handle_shade,
+    },
+    [capabilities.windowShadeLevel.ID] = {
+      [capabilities.windowShadeLevel.commands.setShadeLevel.NAME] = cmd.handle_shade,
+    },
     [cap_reset.ID] = {
       [cap_reset.commands.setSelect.NAME] = cmd.handle_reset,
+    },
+    [cap_custompublish.ID] = {
+      [cap_custompublish.commands.publish.NAME] = cmd.handle_custompublish,
+    },
+    [cap_setenergy.ID] = {
+      [cap_setenergy.commands.setEnergy.NAME] = cmd.handle_setenergy,
+    },
+    [cap_setpower.ID] = {
+      [cap_setpower.commands.setPower.NAME] = cmd.handle_setpower,
+    },
+    [cap_numfield.ID] = {
+      [cap_numfield.commands.setNumber.NAME] = cmd.handle_setnumeric,
+    },
+    [cap_unitfield.ID] = {
+      [cap_unitfield.commands.setUnit.NAME] = cmd.handle_setnumeric,
     },
   }
 })
 
-log.info ('MQTT Device Driver V1.2 Started')
+log.info ('MQTT Device Driver V1.7 Started')
 
 thisDriver:run()

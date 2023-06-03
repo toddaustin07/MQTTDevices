@@ -1,5 +1,5 @@
 --[[
-  Copyright 2022 Todd Austin
+  Copyright 2022, 2023 Todd Austin
 
   Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
   except in compliance with the License. You may obtain a copy of the License at:
@@ -81,7 +81,11 @@ local function getJSONElement(key, jsonstring)
     end
     
     if type(compound) ~= 'table' then
-      if el_idx == #elementslist then; found = true; end
+      if el_idx == #elementslist then
+        found = true
+      else
+        break
+      end
     end
   end
   
@@ -101,6 +105,21 @@ local function motionplus(device, msg)
   local batteryvalue = getJSONElement(device.preferences.batterykey, msg)
   if type(batteryvalue) == 'number' then
     device:emit_event(capabilities.battery.battery(batteryvalue))
+  end
+
+end
+
+
+local function energy(device, msg)
+
+  local powervalue = getJSONElement(device.preferences.powerkey, msg)
+  if type(powervalue) == 'number' then
+    if device.preferences.powerunits == 'mwatts' then
+      powervalue = powervalue / 1000
+    elseif device.preferences.powerunits == 'kwatts' then
+      powervalue = powervalue * 1000
+    end
+    device:emit_event(capabilities.powerMeter.power(powervalue))
   end
 
 end
@@ -299,10 +318,83 @@ local function process_message(topic, msg)
           end
           
         elseif dtype == 'Energy' then
-          device:emit_event(capabilities.energyMeter.energy({value = tonumber(value), unit = device.preferences.units }))
+          device:emit_event(capabilities.energyMeter.energy({value = tonumber(value), unit = device.preferences.eunits }))
+          
+          if device:supports_capability_by_id('powerMeter') then
+            local powervalue = getJSONElement(device.preferences.powerkey, msg)
+            if type(powervalue) == 'number' then
+              if device.preferences.punits == 'mwatts' then
+                powervalue = math.floor(powervalue / 1000 * 1000000) / 1000000
+              elseif device.preferences.punits == 'kwatts' then
+                powervalue = math.floor(powervalue * 1000 * 1000000) / 1000000
+              end
+              device:emit_event(capabilities.powerMeter.power(powervalue))
+            end
+          end
+          
+        elseif dtype == 'CO2' then
+          value = tonumber(value)
+          if type(value) == 'number' then
+            device:emit_event(capabilities.carbonDioxideMeasurement.carbonDioxide(value))
+          end
           
         elseif dtype == 'Text' then
           device:emit_event(cap_text.text(value))
+          
+        elseif dtype == 'Numeric' then
+        
+          local numval, unitval
+          if device.preferences.format == 'json' then
+            numval = tonumber(value)
+            unitval = getJSONElement(device.preferences.unitkey, msg)
+          else
+            numval, unitval = value:match('([%d%.%-]+) (.+)')
+            if not numval then
+                numval = tonumber(value)
+                unitval = ' '
+            else
+              numval = tonumber(numval)
+            end
+          end
+
+          if type(numval) ~= 'number' then; return; end
+          if type(unitval) ~= 'string' then; unitval = ' '; end
+          
+          device:emit_event(cap_numfield.numberval(numval))
+          device:emit_event(cap_unitfield.unittext(unitval))
+          
+        elseif dtype == 'Shade' then
+        
+          local numvalue = tonumber(value)
+          if numvalue then
+            device:emit_event(capabilities.windowShadeLevel.shadeLevel(numvalue))
+            if numvalue == 0 then
+              device:emit_event(capabilities.windowShade.windowShade('closed'))
+            elseif numvalue == 100 then
+              device:emit_event(capabilities.windowShade.windowShade('open'))
+            else
+              device:emit_event(capabilities.windowShade.windowShade('partially open'))
+            end
+          else
+            if value == device.preferences.shadeopen then
+              device:emit_event(capabilities.windowShade.windowShade('open'))
+              device:emit_event(capabilities.windowShadeLevel.shadeLevel(100))
+            elseif value == device.preferences.shadeclose then
+              device:emit_event(capabilities.windowShade.windowShade('closed'))
+              device:emit_event(capabilities.windowShadeLevel.shadeLevel(0))
+            elseif value == device.preferences.shadepause then
+              device:emit_event(capabilities.windowShade.windowShade('partially open'))
+            end
+          end
+        
+        elseif dtype == 'Battery' then
+          value = tonumber(value)
+          if type(value) == 'number' then
+            if (value >= 0) and (value <= 100) then
+              value = math.floor(value + 0.5)
+              device:emit_event(capabilities.battery.battery(value))
+            end
+          end
           
         end
         

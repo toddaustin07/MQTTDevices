@@ -1,0 +1,43 @@
+{
+    "dashboard": {
+        "states": [],
+        "actions": []
+    },
+    "detailView": [
+        {
+            "label": "{{i18n.label}}",
+            "displayType": "numberField",
+            "numberField": {
+                "value": "powerval.value",
+                "valueType": "number",
+                "unit": "powerval.unit",
+                "command": "setPower",
+                "argumentType": "number",
+                "range": [
+                    0,
+                    100000
+                ]
+            }
+        }
+    ],
+    "automation": {
+        "conditions": [],
+        "actions": [
+            {
+                "label": "Set Power Value",
+                "displayType": "numberField",
+                "numberField": {
+                    "command": "setPower",
+                    "argumentType": "number",
+                    "unit": "powerval.unit",
+                    "range": [
+                        0,
+                        100000
+                    ]
+                }
+            }
+        ]
+    },
+    "id": "partyvoice23922.setpower",
+    "version": 1
+}

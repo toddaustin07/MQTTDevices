@@ -1,0 +1,134 @@
+name: mqttenergy.v3b
+components:
+  - id: main
+    capabilities:
+      - id: energyMeter
+        version: 1
+      - id: partyvoice23922.resetselect
+        version: 1
+      - id: partyvoice23922.setenergy
+        version: 1
+      - id: powerMeter
+        version: 1
+      - id: partyvoice23922.setpower
+        version: 1
+      - id: partyvoice23922.status
+        version: 1
+      - id: partyvoice23922.refresh
+        version: 1
+    categories:
+      - name: PowerMeter
+metadata:
+  ocfDeviceType: x.com.st.d.energymeter
+preferences:
+  - title: "Subscribe Topic"
+    name: subTopic
+    description: "Topic Name"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "xxxxx/xxxxx"
+  - title: "Energy JSON Key"
+    name: jsonelement
+    description: "Data element"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "energy.value"
+  - title: "Energy Units"
+    name: eunits
+    description: "Select unit"
+    required: true
+    preferenceType: enumeration
+    definition:
+      options:
+        Wh: "Wh"
+        kWh: "kWh"
+        mWh: "mWh"
+        kVah: "kVah"
+      default: kWh
+  - title: "Power JSON Key"
+    name: powerkey
+    description: "Data element"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "power.value"
+  - title: "Power Units"
+    name: punits
+    description: "Select unit"
+    required: true
+    preferenceType: enumeration
+    definition:
+      options:
+        mwatts: "Milliwatts"
+        watts: "Watts"
+        kwatts: "Kilowatts"
+      default: watts
+  - title: "Publish Energy Changes"
+    name: epublish
+    description: "Enable/Disable"
+    required: true
+    preferenceType: boolean
+    definition:
+      default: false
+  - title: "Publish Energy Topic"
+    name: epubtopic
+    description: "Topic String"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "xxxxx/xxxxx"
+  - title: "Energy Units Set"
+    name: eunitsset
+    description: "Select unit"
+    required: true
+    preferenceType: enumeration
+    definition:
+      options:
+        Wh: "Wh"
+        kWh: "kWh"
+        mWh: "mWh"
+        kVah: "kVah"
+      default: kWh
+  - title: "Publish Power Changes"
+    name: ppublish
+    description: "Enable/Disable"
+    required: true
+    preferenceType: boolean
+    definition:
+      default: false
+  - title: "Publish Power Topic"
+    name: ppubtopic
+    description: "Topic String"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "xxxxx/xxxxx"
+  - title: "Power Units Set"
+    name: punitsset
+    description: "Select unit"
+    required: true
+    preferenceType: enumeration
+    definition:
+      options:
+        mwatts: "Milliwatts"
+        watts: "Watts"
+        kwatts: "Kilowatts"
+      default: watts
+  - title: "Publish QoS"
+    name: qos
+    description: "Quality of Service"
+    required: true
+    preferenceType: enumeration
+    definition:
+      options:
+        qos0: "0"
+        qos1: "1"
+        qos2: "2"
+      default: qos1

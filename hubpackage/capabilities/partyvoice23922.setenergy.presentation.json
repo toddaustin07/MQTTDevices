@@ -1,0 +1,43 @@
+{
+    "dashboard": {
+        "states": [],
+        "actions": []
+    },
+    "detailView": [
+        {
+            "label": "{{i18n.label}}",
+            "displayType": "numberField",
+            "numberField": {
+                "value": "energyval.value",
+                "valueType": "number",
+                "unit": "energyval.unit",
+                "command": "setEnergy",
+                "argumentType": "number",
+                "range": [
+                    -100000,
+                    100000
+                ]
+            }
+        }
+    ],
+    "automation": {
+        "conditions": [],
+        "actions": [
+            {
+                "label": "Set Energy Value",
+                "displayType": "numberField",
+                "numberField": {
+                    "command": "setEnergy",
+                    "argumentType": "number",
+                    "unit": "energyval.unit",
+                    "range": [
+                        -100000,
+                        100000
+                    ]
+                }
+            }
+        ]
+    },
+    "id": "partyvoice23922.setenergy",
+    "version": 1
+}

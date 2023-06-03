@@ -1,0 +1,43 @@
+{
+    "id": "partyvoice23922.numberfield",
+    "version": 1,
+    "status": "proposed",
+    "name": "numberfield",
+    "ephemeral": false,
+    "attributes": {
+        "numberval": {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "value"
+                ]
+            },
+            "setter": "setNumber",
+            "enumCommands": []
+        }
+    },
+    "commands": {
+        "setNumber": {
+            "name": "setNumber",
+            "arguments": [
+                {
+                    "name": "numberval",
+                    "optional": false,
+                    "schema": {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                    }
+                }
+            ]
+        }
+    }
+}

@@ -1,5 +1,5 @@
 --[[
-  Copyright 2022 Todd Austin
+  Copyright 2022, 2023 Todd Austin
 
   Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
   except in compliance with the License. You may obtain a copy of the License at:
@@ -22,22 +22,25 @@ local log = require "log"
 local capabilities = require "st.capabilities"
 local cosock = require "cosock"
 local socket = require "cosock.socket"          -- just for time
-
+local json = require "dkjson"
 
 local subs = require "subscriptions"
 
 
-local function publish_message(device, payload)
+local function publish_message(device, payload, opt_topic, opt_qos)
 
-  if client and payload then
+  if client and (client_reset_inprogress==false) and payload then
   
-    local qos = tonumber(device.preferences.qos:match('qos(%d)$'))
+    local pubtopic = opt_topic or device.preferences.pubtopic
+    local pubqos = opt_qos or device.preferences.qos:match('qos(%d)$')
+    
     assert(client:publish{
-      topic = device.preferences.pubtopic,
+      topic = pubtopic,
       payload = payload,
-      qos = qos
+      qos = tonumber(pubqos)
     })
-    log.debug (string.format('Message "%s" published to topic %s with qos=%d', payload, device.preferences.pubtopic, qos))
+    
+    log.debug (string.format('Message "%s" published to topic %s with qos=%d', payload, pubtopic, tonumber(pubqos)))
     
   end
 
@@ -49,6 +52,7 @@ local function handle_refresh(driver, device, command)
   log.info ('Refresh requested')
 
   if device.device_network_id:find('Master', 1, 'plaintext') then
+    creator_device:emit_event(cap_createdev.deviceType(' ', { visibility = { displayed = false } }))
     init_mqtt(device)
   else
     subs.mqtt_subscribe(device)
@@ -265,6 +269,130 @@ local function handle_reset(driver, device, command)
   
 end
 
+local function disptable(table, tab, maxlevels, currlevel)
+
+	if not currlevel then; currlevel = 0; end
+  currlevel = currlevel + 1
+  for key, value in pairs(table) do
+    if type(key) ~= 'table' then
+      log.debug (tab .. '  ' .. key, value)
+    else
+      log.debug (tab .. '  ', key, value)
+    end
+    if (type(value) == 'table') and (currlevel < maxlevels) then
+      disptable(value, '  ' .. tab, maxlevels, currlevel)
+    end
+  end
+end
+
+local function handle_custompublish(driver, device, command)
+
+  --disptable(command, '  ', 8)
+
+  log.debug (string.format('%s command Received; topic = %s; msg = %s; qos = %d (%s)', command.command, command.args.topic, command.args.message, command.args.qos, type(command.args.qos)))
+  
+  publish_message(device, command.args.message, command.args.topic, command.args.qos)
+
+end
+
+
+local function handle_setenergy(driver, device, command)
+
+  log.info (string.format('Energy value set to %s', command.args.energyval))
+  device:emit_event(cap_setenergy.energyval({value = command.args.energyval, unit = device.preferences.eunitsset}))
+  device:emit_event(capabilities.energyMeter.energy({value = command.args.energyval, unit=device.preferences.eunitsset}))
+
+  if device.preferences.epublish == true then
+    publish_message(device, tostring(command.args.energyval), device.preferences.epubtopic)
+  end
+
+end
+
+
+local function handle_setpower(driver, device, command)
+
+  log.info (string.format('Power value set to %s', command.args.powerval))
+  
+  local disp_multiplier = 1
+  if device.preferences.punitsset == 'mwatts' then
+    disp_multiplier = .001
+  elseif device.preferences.punitsset == 'kwatts' then
+    disp_multiplier = 1000
+  end
+  device:emit_event(cap_setpower.powerval(command.args.powerval * disp_multiplier))
+  device:emit_event(capabilities.powerMeter.power(command.args.powerval * disp_multiplier))
+
+  if device.preferences.ppublish == true then
+    publish_message(device, tostring(command.args.powerval), device.preferences.ppubtopic)
+  end
+
+end
+
+
+local function handle_setnumeric(driver, device, command)
+
+  if command.command == 'setNumber' then
+    device:emit_event(cap_numfield.numberval(command.args.numberval))
+  
+    if device.preferences.publish == true then
+      
+      local sendmsg
+      if device.preferences.format == 'json' then
+        local msgobj = {}
+      
+        msgobj[device.preferences.jsonelement] = command.args.numberval
+        msgobj[device.preferences.unitkey] = device.state_cache.main[cap_unitfield.ID].unittext.value
+        
+        sendmsg = json.encode(msgobj, { indent = false })
+      
+      else
+        sendmsg = tostring(command.args.numberval) .. ' ' .. device.state_cache.main[cap_unitfield.ID].unittext.value
+      
+      end  
+      
+      publish_message(device, sendmsg)
+    end
+  
+  elseif command.command == 'setUnit' then
+    device:emit_event(cap_unitfield.unittext(command.args.unittext))
+
+  end
+end
+
+local function handle_shade(driver, device, command)
+
+  local cmdmap =  { 
+                    ['open'] = {['attribute'] = 'open', ['pubval'] = device.preferences.shadeopen},
+                    ['close'] = {['attribute'] = 'closed', ['pubval'] = device.preferences.shadeclose},
+                    ['pause'] = {['attribute'] = 'partially open', ['pubval'] = device.preferences.shadepause},
+                    ['setShadeLevel'] = {['attribute'] = command.args.shadeLevel, ['pubval'] = ''},
+                  }
+
+  if command.command == 'setShadeLevel' then
+    device:emit_event(capabilities.windowShadeLevel.shadeLevel(cmdmap[command.command].attribute))
+    cmdmap['setShadeLevel'].pubval = tostring(command.args.shadeLevel)
+    if command.args.shadeLevel == 0 then
+      device:emit_event(capabilities.windowShade.windowShade('closed'))
+    elseif command.args.shadeLevel == 100 then
+      device:emit_event(capabilities.windowShade.windowShade('open'))
+    else
+      device:emit_event(capabilities.windowShade.windowShade('partially open'))
+    end
+    
+  else
+    device:emit_event(capabilities.windowShade.windowShade(cmdmap[command.command].attribute))
+    if cmdmap[command.command].attribute == 'open' then
+      device:emit_event(capabilities.windowShadeLevel.shadeLevel(100))
+    elseif cmdmap[command.command].attribute == 'closed' then
+      device:emit_event(capabilities.windowShadeLevel.shadeLevel(0))
+    end
+  end
+  
+  if device.preferences.publish then
+    publish_message(device, cmdmap[command.command].pubval)
+  end
+
+end
 
 return  {
           handle_refresh = handle_refresh,
@@ -278,5 +406,10 @@ return  {
           handle_tempset = handle_tempset,
           handle_humidityset = handle_humidityset,
           handle_reset = handle_reset,
+          handle_custompublish = handle_custompublish,
+          handle_setenergy = handle_setenergy,
+          handle_setpower = handle_setpower,
+          handle_setnumeric = handle_setnumeric,
+          handle_shade = handle_shade,
         }
         
