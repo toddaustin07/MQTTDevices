@@ -1,7 +1,7 @@
 # MQTTDevices
 SmartThings Edge driver for creating MQTT-connected devices.  These devices will update their states based on MQTT messages.  No cloud connection is used, so everything is executed locally.  
 
-Currently supported device types:  switch, button, contact, motion, motionPlus, alarm, dimmer, vibration, lock, presence, sound, moisture, temperature, humidity, energy, text, numeric.  More can be added - just ask!
+Currently supported device types:  switch, battery, button, contact, motion, motionPlus, alarm, dimmer, vibration, lock, presence, sound, moisture, temperature, humidity, energy, text, numeric.  More can be added - just ask!
 
 Switch, button, alarm, dimmer, lock, temperature, humidity, energy, and numeric devices can also be configured to publish MQTT messages when state changes from within SmartThings (i.e., manually via mobile app or automations).
 
@@ -16,9 +16,9 @@ If you have a device or application that responds to messages from MQTT, then yo
 * MQTT broker such as [Mosquitto](https://mosquitto.org/)
 
 ## Installation / Configuration
-Install driver using [this channel invite link](https://bestow-regional.api.smartthings.com/invite/Q1jP7BqnNNlL).  Enroll your hub and choose "MQTT Devices V1" from the list of drivers to install.
+Install driver using [this channel invite link](https://bestow-regional.api.smartthings.com/invite/Q1jP7BqnNNlL).  Enroll your hub and choose "MQTT Devices V1.7" from the list of drivers to install.
 
-Once available on your hub, use the SmartThings mobile app to initiate an *Add device / Scan for nearby devices*. A new device called 'MQTT Device Creator' will be found in your 'No room assigned' room.  Open the device and go to the device Settings menu (3 vertical dot menu in upper right corner of Controls tab).  Provide the username and password (if required) for your MQTT broker, and the IP address of the MQTT broker.  
+Once available on your hub, use the SmartThings mobile app to initiate an *Add device / Scan for nearby devices*. A new device called 'MQTT Device Creator V1.7' will be found the room where your hub device is located.  Open the device and go to the device Settings menu (3 vertical dot menu in upper right corner of Controls tab).  Provide the username and password (if required) for your MQTT broker, and the IP address of the MQTT broker.  
 
 An additional option - 'Reconnection wait' - can be configured for the retry frequency when the connection to the broker is lost.  This defaults to 20 seconds but can be shortened or lengthened based on needs.
 
