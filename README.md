@@ -51,50 +51,51 @@ The Creator device supports a command that can be used from a Rule to publish an
 Here is an example Rule for doing so:
 ```
 {
-	"name": "Custom MQTT",
-	"actions": [
-		{
-			"if": {
-				"equals": {
-					"left": {
-						"device": {
-							"devices": [
-								"3228bb6c-a115-4280-b3e1-f3a4224442d2"
-							],
-							"component": "main",
-							"capability": "button",
-							"attribute": "button"
-						}
-					},
-					"right": {
-						"string": "pushed"
-					}
-				},
-				"then": [
-					{
-						"command": {
-							"devices": [
-								"7a31fbae-58e9-45b8-a0c6-777ca1eed274"
-							],
-							"commands": [
-								{
-									"component": "main",
-									"capability": "partyvoice23922.mqttpublish",
-									"command": "publish",
-									"arguments": [
-										{ string": "mytesttopic/custommessages"	},
-										{ "string": "This is my custom message" },
-										{ "integer": 1 }
-									]
-								}
-							]
-						}
-					}
-				]
-			}
-		}
-	]
+  "name": "Custom MQTT",
+  "actions": [
+    {
+      "if": {
+        "equals": {
+          "left": {
+            "device": {
+              "devices": [
+                "3228bb6c-a115-4280-b3e1-f3a4224442d2"
+              ],
+              "component": "main",
+              "capability": "button",
+              "attribute": "button"
+            }
+          },
+          "right": {
+            "string": "pushed"
+          }
+        },
+        "then": [
+          {
+            "command": {
+              "devices": [
+                "7a31fbae-58e9-45b8-a0c6-777ca1eed274"
+              ],
+              "commands": [
+                {
+                  "component": "main",
+                  "capability": "partyvoice23922.mqttpublish",
+                  "command": "publish",
+                  "arguments": [
+                    { "string": "mytesttopic/custommessages" },
+                    { "string": "This is my custom message" },
+                    { "integer": 1 }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
 }
+
 ```
 
 ### Additional notes
