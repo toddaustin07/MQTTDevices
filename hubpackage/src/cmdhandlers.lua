@@ -189,6 +189,39 @@ local function handle_dimmer(driver, device, command)
   end
 end
 
+
+local function handle_fanspeed(driver, device, command)
+
+  log.info ('Fan speed value changed to ', command.args.speed)
+  
+  device:emit_event(capabilities.fanSpeed.fanSpeed(command.args.speed))
+  
+  local minspeed, maxspeed = device.preferences.fanspeedrange:match('^(%d+)-(%d+)$')
+
+  minspeed = tonumber(minspeed)
+  maxspeed = tonumber(maxspeed)
+  
+  if (type(minspeed) == 'number') and (type(maxspeed) == 'number') then
+  
+    local pubspeedmap = { 
+                          [0] = minspeed,
+                          [1] = math.floor(maxspeed * .33),
+                          [2] = math.floor(maxspeed * .50),
+                          [3] = math.floor(maxspeed * .66),
+                          [4] = maxspeed
+                        }
+  
+    if device.preferences.publish == true then
+      
+      publish_message(device, tostring(pubspeedmap[command.args.speed]))
+      
+    end
+  else
+    log.warn ('Invalid fan speed range configured:', device.preferences.fanspeedrange)
+  end
+end
+
+
 local function handle_lock(driver, device, command)
 
   log.info ('Lock command received: ', command.command)
@@ -394,6 +427,56 @@ local function handle_shade(driver, device, command)
 
 end
 
+
+local function handle_robot(driver, device, command)
+
+  log.debug ('Robot cleaner command/mode:', command.command, command.args.mode)
+  
+  if command.command == 'setRobotCleanerCleaningMode' then
+    device:emit_event(capabilities.robotCleanerCleaningMode.robotCleanerCleaningMode(command.args.mode))
+    
+    if command.args.mode == 'stop' then
+      device:emit_event(capabilities.robotCleanerMovement.robotCleanerMovement('idle'))
+      if device.preferences.publish then
+        publish_message(device, device.preferences.robotstop)
+      end
+    elseif command.args.mode == 'auto' then
+      device:emit_event(capabilities.robotCleanerMovement.robotCleanerMovement('cleaning'))
+      if device.preferences.publish then
+        publish_message(device, device.preferences.robotstart)
+      end
+    
+    end
+  
+  elseif command.command == 'setRobotCleanerMovement' then
+    if command.args.mode ~= 'charging' then
+      device:emit_event(capabilities.robotCleanerMovement.robotCleanerMovement(command.args.mode))
+    else
+      device:emit_event(capabilities.robotCleanerMovement.robotCleanerMovement('homing'))
+    end
+    
+    if command.args.mode == 'idle' then
+      device:emit_event(capabilities.robotCleanerCleaningMode.robotCleanerCleaningMode('manual'))
+      if device.preferences.publish then
+        publish_message(device, device.preferences.robotpause)
+      end
+      
+    elseif command.args.mode == 'cleaning' then
+      device:emit_event(capabilities.robotCleanerCleaningMode.robotCleanerCleaningMode('auto'))
+      if device.preferences.publish then
+        publish_message(device, device.preferences.robotstart)
+      end
+    
+    elseif (command.args.mode == 'charging') or (command.args.mode == 'homing') then
+      device:emit_event(capabilities.robotCleanerCleaningMode.robotCleanerCleaningMode('manual'))
+      if device.preferences.publish then
+        publish_message(device, device.preferences.robothome)
+      end
+    end
+  end
+  
+end
+
 return  {
           handle_refresh = handle_refresh,
           handle_createdevice = handle_createdevice,
@@ -411,5 +494,7 @@ return  {
           handle_setpower = handle_setpower,
           handle_setnumeric = handle_setnumeric,
           handle_shade = handle_shade,
+          handle_robot = handle_robot,
+          handle_fanspeed = handle_fanspeed,
         }
         

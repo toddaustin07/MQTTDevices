@@ -238,6 +238,39 @@ local function process_message(topic, msg)
             log.warn('Invalid dimmer value received (NaN)');
           end
           
+        elseif dtype == 'Fan' then
+          local numvalue = tonumber(value)
+          if numvalue then
+            log.debug ('Fan value received:', numvalue)
+            
+            local minspeed, maxspeed = device.preferences.fanspeedrange:match('^(%d+)-(%d+)$')
+            minspeed = tonumber(minspeed)
+            maxspeed = tonumber(maxspeed)
+            
+            if (type(minspeed) == 'number') and (type(maxspeed) == 'number') then
+              local fanspeed
+              
+              if numvalue == minspeed then
+                fanspeed = 0
+              elseif numvalue == maxspeed then
+                fanspeed = 4
+              elseif numvalue >= (maxspeed * .75) then
+                fanspeed = 3
+              elseif numvalue >= (maxspeed * .50) then
+                fanspeed = 2
+              else
+                fanspeed = 1
+              end
+                
+              device:emit_event(capabilities.fanSpeed.fanSpeed(fanspeed))
+              
+            else
+              log.warn ('Invalid fan speed range configured:', device.preferences.fanspeedrange)
+            end
+          else
+            log.warn('Invalid fan value received (NaN):', value)
+          end
+          
         elseif dtype == 'Acceleration' then  
           if value == device.preferences.accelactive then
             device:emit_event(capabilities.accelerationSensor.acceleration.active())
@@ -394,6 +427,21 @@ local function process_message(topic, msg)
               value = math.floor(value + 0.5)
               device:emit_event(capabilities.battery.battery(value))
             end
+          end
+          
+        elseif dtype == 'Robot' then
+          if value == device.preferences.robotstart then
+            device:emit_event(capabilities.robotCleanerMovement.robotCleanerMovement('cleaning'))
+            device:emit_event(capabilities.robotCleanerCleaningMode.robotCleanerCleaningMode('auto'))
+          elseif value == device.preferences.robotstop then
+            device:emit_event(capabilities.robotCleanerMovement.robotCleanerMovement('idle'))
+            device:emit_event(capabilities.robotCleanerCleaningMode.robotCleanerCleaningMode('stop'))
+          elseif value == device.preferences.robotpause then
+            device:emit_event(capabilities.robotCleanerMovement.robotCleanerMovement('idle'))
+            device:emit_event(capabilities.robotCleanerCleaningMode.robotCleanerCleaningMode('manual'))
+          elseif value == device.preferences.robothome then
+            device:emit_event(capabilities.robotCleanerMovement.robotCleanerMovement('charging'))
+            device:emit_event(capabilities.robotCleanerCleaningMode.robotCleanerCleaningMode('stop'))
           end
           
         end

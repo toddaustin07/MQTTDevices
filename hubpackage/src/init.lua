@@ -59,6 +59,8 @@ typemeta =  {
               ['CO2']          = { ['profile'] = 'mqttCO2.v1',           ['created'] = 0, ['switch'] = false },
               ['Shade']        = { ['profile'] = 'mqttshade.v1b',        ['created'] = 0, ['switch'] = false },
               ['Battery']      = { ['profile'] = 'mqttbattery.v1',       ['created'] = 0, ['switch'] = false },
+              ['Robot']        = { ['profile'] = 'mqttrobot.v1',         ['created'] = 0, ['switch'] = false },
+              ['Fan']          = { ['profile'] = 'mqttfan.v1',           ['created'] = 0, ['switch'] = true },
             }
 
 -- Module variables
@@ -66,15 +68,22 @@ typemeta =  {
 local initialized = false
 local clearcreatemsg_timer
 local shutdown_requested = false
-local MASTERPROFILE = 'mqttcreator.v7'
-local MASTERLABEL = 'MQTT Device Creator V1.7'
-local CREATECAPID = 'partyvoice23922.createmqttdev7'
+
+local MASTERPROFILE = 'mqttcreator.v9'
+local MASTERLABEL = 'MQTT Device Creator V1.9'
+
+local CREATECAPID  = 'partyvoice23922.createmqttdev9'
+local CREATECAPID8  = 'partyvoice23922.createmqttdev8'
+local CREATECAPID7 = 'partyvoice23922.createmqttdev7'
+local CREATECAPID6 = 'partyvoice23922.createmqttdev6'
 
 
 -- Custom Capabilities
-cap_createdev_new = capabilities[CREATECAPID]
-cap_createdev_old = capabilities["partyvoice23922.createmqttdev6"]
-cap_createdev = cap_createdev_old
+cap_createdev_latest = capabilities[CREATECAPID]
+cap_createdev_old8 = capabilities[CREATECAPID8]
+cap_createdev_old7 = capabilities[CREATECAPID7]
+cap_createdev_old6 = capabilities[CREATECAPID6]
+cap_createdev = cap_createdev_old6
 
 cap_status = capabilities["partyvoice23922.status"]
 cap_topiclist = capabilities["partyvoice23922.topiclist"]
@@ -248,9 +257,13 @@ local function device_init(driver, device)
     creator_device = device
     
     if device:supports_capability_by_id(CREATECAPID) then
-      cap_createdev = cap_createdev_new
+      cap_createdev = cap_createdev_latest
+    elseif device:supports_capability_by_id(CREATECAPID8) then
+      cap_createdev = cap_createdev_old8
+    elseif device:supports_capability_by_id(CREATECAPID7) then
+      cap_createdev = cap_createdev_old7
     else
-      cap_createdev = cap_createdev_old
+      cap_createdev = cap_createdev_old6
     end
     
     device:emit_event(cap_createdev.deviceType(' '))
@@ -315,7 +328,7 @@ local function device_added (driver, device)
     elseif dtype == 'Water' then
       device:emit_event(capabilities.waterSensor.water('dry'))
     elseif dtype == 'Temperature' then
-      device:emit_event(capabilities.temperatureMeasurement.temperature(20))
+      device:emit_event(capabilities.temperatureMeasurement.temperature({value=20, unit='C'}))
       device:emit_event(cap_tempset.vtemp({value=20, unit='C'}))
     elseif dtype == 'Humidity' then
       device:emit_event(capabilities.relativeHumidityMeasurement.humidity(0))
@@ -338,6 +351,9 @@ local function device_added (driver, device)
       device:emit_event(capabilities.windowShadeLevel.shadeLevel(100))
     elseif dtype == 'Battery' then
       device:emit_event(capabilities.battery.battery(100))
+    elseif dtype == 'Fan' then
+      device:emit_event(capabilities.fanSpeed.fanSpeed(0))
+      
     end
 
     creator_device:emit_event(cap_createdev.deviceType('Device created'))
@@ -512,11 +528,14 @@ thisDriver = Driver("MQTT Devices", {
   },
   driver_lifecycle = shutdown_handler,
   capability_handlers = {
-    [cap_createdev_new.ID] = {
-      [cap_createdev_new.commands.setDeviceType.NAME] = cmd.handle_createdevice,
+    [cap_createdev_latest.ID] = {
+      [cap_createdev_latest.commands.setDeviceType.NAME] = cmd.handle_createdevice,
     },
-    [cap_createdev_old.ID] = {
-      [cap_createdev_old.commands.setDeviceType.NAME] = cmd.handle_createdevice,
+    [cap_createdev_old7.ID] = {
+      [cap_createdev_old7.commands.setDeviceType.NAME] = cmd.handle_createdevice,
+    },
+    [cap_createdev_old6.ID] = {
+      [cap_createdev_old6.commands.setDeviceType.NAME] = cmd.handle_createdevice,
     },
     [cap_refresh.ID] = {
       [cap_refresh.commands.push.NAME] = cmd.handle_refresh,
@@ -579,9 +598,18 @@ thisDriver = Driver("MQTT Devices", {
     [cap_unitfield.ID] = {
       [cap_unitfield.commands.setUnit.NAME] = cmd.handle_setnumeric,
     },
+    [capabilities.robotCleanerCleaningMode.ID] = {
+      [capabilities.robotCleanerCleaningMode.commands.setRobotCleanerCleaningMode.NAME] = cmd.handle_robot,
+    },
+    [capabilities.robotCleanerMovement.ID] = {
+      [capabilities.robotCleanerMovement.commands.setRobotCleanerMovement.NAME] = cmd.handle_robot,
+    },
+    [capabilities.fanSpeed.ID] = {
+      [capabilities.fanSpeed.commands.setFanSpeed.NAME] = cmd.handle_fanspeed,
+    },
   }
 })
 
-log.info ('MQTT Device Driver V1.7 Started')
+log.info ('MQTT Device Driver V1.8 Started')
 
 thisDriver:run()

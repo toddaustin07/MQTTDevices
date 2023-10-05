@@ -1,21 +1,27 @@
-name: mqttdimmer.v3
+name: mqttfan.v1
 components:
   - id: main
     capabilities:
-      - id: switchLevel
-        version: 1
-      - id: switch
+      - id: fanSpeed
         version: 1
       - id: partyvoice23922.status
         version: 1
       - id: partyvoice23922.refresh
         version: 1
     categories:
-      - name: Switch
+      - name: Fan
 metadata:
-  ocfDeviceType: oic.d.switch
+  ocfDeviceType: oic.d.fan
 preferences:
-  - title: "Subscribe Topic"
+  - title: "Fan speed value range"
+    name: fanspeedrange
+    description: "Enter a range in the form of 'n-nnn', representing off to maxspeed"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "0-4"
+  - title: "Fan Subscribe Topic"
     name: subTopic
     description: "Topic Name"
     required: true
@@ -23,7 +29,7 @@ preferences:
     definition:
       stringType: text
       default: "xxxxx/xxxxx"
-  - title: "Expected Message Format"
+  - title: "Expected Fan speed Message Format"
     name: format
     description: "Select type"
     required: true
@@ -33,29 +39,22 @@ preferences:
         json: "JSON"
         string: "String"
       default: string
-  - title: "JSON Key"
+  - title: "Fan speed JSON Key"
     name: jsonelement
     description: "Data element"
     required: true
     preferenceType: string
     definition:
       stringType: text
-      default: "Dimmer.Value"
-  - title: "Max Dimmer Value"
-    name: dimmermax
-    description: "Enter a number"
-    required: true
-    preferenceType: integer
-    definition:
-      default: 100
-  - title: "Publish Dimmer State Changes"
+      default: "Fanspeed.Value"
+  - title: "Publish State Changes"
     name: publish
     description: "Enable/Disable"
     required: true
     preferenceType: boolean
     definition:
       default: false
-  - title: "Publish Topic"
+  - title: "Publish Fan speed Topic"
     name: pubtopic
     description: "Topic String"
     required: true

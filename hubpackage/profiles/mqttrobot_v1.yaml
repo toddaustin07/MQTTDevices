@@ -1,21 +1,21 @@
-name: mqttdimmer.v3
+name: mqttrobot.v1
 components:
   - id: main
     capabilities:
-      - id: switchLevel
+      - id: robotCleanerCleaningMode
         version: 1
-      - id: switch
+      - id: robotCleanerMovement
         version: 1
       - id: partyvoice23922.status
         version: 1
       - id: partyvoice23922.refresh
         version: 1
     categories:
-      - name: Switch
+      - name: RobotCleaner
 metadata:
-  ocfDeviceType: oic.d.switch
+  ocfDeviceType: oic.d.robotcleaner
 preferences:
-  - title: "Subscribe Topic"
+  - title: "Subscribe Basic Control Topic"
     name: subTopic
     description: "Topic Name"
     required: true
@@ -40,15 +40,40 @@ preferences:
     preferenceType: string
     definition:
       stringType: text
-      default: "Dimmer.Value"
-  - title: "Max Dimmer Value"
-    name: dimmermax
-    description: "Enter a number"
+      default: "shade.value"
+  - title: "START Value"
+    name: robotstart
+    description: "Msg value for START"
     required: true
-    preferenceType: integer
+    preferenceType: string
     definition:
-      default: 100
-  - title: "Publish Dimmer State Changes"
+      stringType: text
+      default: "START"
+  - title: "STOP Value"
+    name: robotstop
+    description: "Msg value for STOP"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "STOP"
+  - title: "PAUSE Value"
+    name: robotpause
+    description: "Msg value for PAUSE"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "PAUSE"
+  - title: "HOME Value"
+    name: robothome
+    description: "Msg value for HOME"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "HOME"
+  - title: "Publish Basic Control"
     name: publish
     description: "Enable/Disable"
     required: true
@@ -57,7 +82,7 @@ preferences:
       default: false
   - title: "Publish Topic"
     name: pubtopic
-    description: "Topic String"
+    description: "Topic Name"
     required: true
     preferenceType: string
     definition:
