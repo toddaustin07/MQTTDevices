@@ -1,9 +1,9 @@
 # MQTTDevices
 SmartThings Edge driver for creating MQTT-connected devices.  These devices will update their states based on MQTT messages.  No cloud connection is used, so everything is executed locally.  
 
-Currently supported device types:  switch, battery, button, contact, motion, motionPlus, alarm, dimmer, vibration, lock, presence, sound, moisture, temperature, humidity, energy, text, numeric, robot vacuum, fan.  More can be added - just ask!
+Currently supported device types:  switch, battery, button, contact, motion, motionPlus, alarm, dimmer, vibration, lock, presence, sound, moisture, temperature, humidity, energy, text, numeric, robot vacuum, fanspeed.  More can be added - just ask!
 
-Switch, button, alarm, dimmer, lock, temperature, humidity, energy, and numeric devices can also be configured to publish MQTT messages when state changes from within SmartThings (i.e., manually via mobile app or automations).
+Switch, button, alarm, dimmer, lock, temperature, humidity, energy, numeric, and fanspeed devices can also be configured to publish MQTT messages when state changes from within SmartThings (i.e., manually via mobile app or automations).
 
 There is also a command provided for building Rules that can publish *any* on-the-fly MQTT message to a given topic.
 
