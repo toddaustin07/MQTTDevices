@@ -23,29 +23,7 @@ local capabilities = require "st.capabilities"
 local cosock = require "cosock"
 local socket = require "cosock.socket"          -- just for time
 local json = require "dkjson"
-
 local subs = require "subscriptions"
-
-
-local function publish_message(device, payload, opt_topic, opt_qos)
-
-  if client and (client_reset_inprogress==false) and payload then
-  
-    local pubtopic = opt_topic or device.preferences.pubtopic
-    local pubqos = opt_qos or device.preferences.qos:match('qos(%d)$')
-    
-    assert(client:publish{
-      topic = pubtopic,
-      payload = payload,
-      qos = tonumber(pubqos)
-    })
-    
-    log.debug (string.format('Message "%s" published to topic %s with qos=%d', payload, pubtopic, tonumber(pubqos)))
-    
-  end
-
-end
-
 
 local function handle_refresh(driver, device, command)
 
@@ -60,6 +38,10 @@ local function handle_refresh(driver, device, command)
 
 end
 
+local function handle_device_status_refresh(driver, device, command)
+  log.info ('Refresh status device requested, request updated data from zigbee2mqtt')
+  subs.get_last_status_device(device)
+end
 
 local function create_device(driver, dtype)
 
@@ -93,7 +75,6 @@ local function create_device(driver, dtype)
   end
 end
 
-
 local function handle_createdevice(driver, device, command)
 
   log.debug("Device type selection: ", command.args.value)
@@ -111,15 +92,21 @@ local function handle_switch(driver, device, command)
   device:emit_event(capabilities.switch.switch(command.command))
 
   local dtype = device.device_network_id:match('MQTT_(.+)_+')
-  
-  if dtype == 'Switch' and device.preferences.publish == true then
+  if (dtype == 'Switch' or dtype == 'Dimmer') and device.preferences.publish == true then
       
     local cmdmap = {
                       ['on'] = device.preferences.switchon,
                       ['off'] = device.preferences.switchoff
                    }
-           
-    publish_message(device, cmdmap[command.command])
+    if dtype == 'Dimmer' then
+      if device.preferences.swformat == 'json' then
+        subs.publish_message(device, tostring('{ "'.. device.preferences.swjsonelement ..'":"'..cmdmap[command.command]..'"}'), device.preferences.pubswtopic)
+      else
+        subs.publish_message(device, cmdmap[command.command], device.preferences.pubswtopic)
+      end
+    else
+      subs.publish_message(device, cmdmap[command.command])
+    end
 
   end
 end
@@ -131,8 +118,8 @@ local function handle_button(driver, device, command)
   device:emit_event(capabilities.button.button.pushed({state_change = true}))
   
   if device.preferences.publish == true then
-    
-    publish_message(device, device.preferences.butpush)
+
+    subs.publish_message(device, device.preferences.butpush)
       
   end
 end
@@ -153,24 +140,16 @@ local function handle_alarm(driver, device, command)
                       ['strobe'] = device.preferences.alarmstrobe,
                       ['both'] = device.preferences.alarmboth,
                    }
-                   
-    publish_message(device, cmdmap[command.command])
+
+    subs.publish_message(device, cmdmap[command.command])
 
   end
 end
 
-
 local function handle_dimmer(driver, device, command)
-
   log.info ('Dimmmer value changed to ', command.args.level)
   
   local dimmerlevel = command.args.level
-  
-  if device.preferences.dimmermax then
-    if dimmerlevel > device.preferences.dimmermax then
-      dimmerlevel = device.preferences.dimmermax
-    end
-  end
     
   device:emit_event(capabilities.switchLevel.level(dimmerlevel))
   
@@ -183,12 +162,18 @@ local function handle_dimmer(driver, device, command)
   end
   
   if device.preferences.publish == true then
-    
-    publish_message(device, tostring(dimmerlevel))
-    
+    if device.preferences.dimmermax then
+      dimmerlevel = math.floor(math.abs((dimmerlevel * device.preferences.dimmermax) / 100))
+    end
+    log.info ('Dimmmer value calculated ', command.args.level)
+
+    if device.preferences.format == 'json' then
+      subs.publish_message(device, tostring('{ "'.. device.preferences.jsonelement ..'":"'..dimmerlevel..'"}'))
+    else
+      subs.publish_message(device, tostring(dimmerlevel))
+    end
   end
 end
-
 
 local function handle_fanspeed(driver, device, command)
 
@@ -212,15 +197,14 @@ local function handle_fanspeed(driver, device, command)
                         }
   
     if device.preferences.publish == true then
-      
-      publish_message(device, tostring(pubspeedmap[command.args.speed]))
+
+      subs.publish_message(device, tostring(pubspeedmap[command.args.speed]))
       
     end
   else
     log.warn ('Invalid fan speed range configured:', device.preferences.fanspeedrange)
   end
 end
-
 
 local function handle_lock(driver, device, command)
 
@@ -245,13 +229,12 @@ local function handle_lock(driver, device, command)
                   ['unlock'] = device.preferences.lockunlocked
                }
     end
-                   
-    publish_message(device, cmdmap[command.command])
+
+    subs.publish_message(device, cmdmap[command.command])
     
   end
 
 end
-
 
 local function handle_volume(driver, device, command)
   if command.args.volume < device.preferences.threshold then
@@ -260,7 +243,6 @@ local function handle_volume(driver, device, command)
     device:emit_event(capabilities.soundSensor.sound('detected'))
   end
 end
-
 
 local function handle_tempset(driver, device, command)
 
@@ -274,11 +256,10 @@ local function handle_tempset(driver, device, command)
   device:emit_event(cap_tempset.vtemp({value=command.args.temp, unit=tempunit}))
   
   if device.preferences.publish == true then
-    publish_message(device, tostring(command.args.temp))
+    subs.publish_message(device, tostring(command.args.temp))
   end
 
 end
-
 
 local function handle_humidityset(driver, device, command)
 
@@ -287,7 +268,7 @@ local function handle_humidityset(driver, device, command)
   device:emit_event(cap_humidityset.vhumidity(command.args.humidity))
   
   if device.preferences.publish == true then
-    publish_message(device, tostring(command.args.humidity))
+    subs.publish_message(device, tostring(command.args.humidity))
   end
 
 end
@@ -323,11 +304,10 @@ local function handle_custompublish(driver, device, command)
   --disptable(command, '  ', 8)
 
   log.debug (string.format('%s command Received; topic = %s; msg = %s; qos = %d (%s)', command.command, command.args.topic, command.args.message, command.args.qos, type(command.args.qos)))
-  
-  publish_message(device, command.args.message, command.args.topic, command.args.qos)
+
+  subs.publish_message(device, command.args.message, command.args.topic, command.args.qos)
 
 end
-
 
 local function handle_setenergy(driver, device, command)
 
@@ -336,11 +316,10 @@ local function handle_setenergy(driver, device, command)
   device:emit_event(capabilities.energyMeter.energy({value = command.args.energyval, unit=device.preferences.eunitsset}))
 
   if device.preferences.epublish == true then
-    publish_message(device, tostring(command.args.energyval), device.preferences.epubtopic)
+    subs.publish_message(device, tostring(command.args.energyval), device.preferences.epubtopic)
   end
 
 end
-
 
 local function handle_setpower(driver, device, command)
 
@@ -356,11 +335,10 @@ local function handle_setpower(driver, device, command)
   device:emit_event(capabilities.powerMeter.power(command.args.powerval * disp_multiplier))
 
   if device.preferences.ppublish == true then
-    publish_message(device, tostring(command.args.powerval), device.preferences.ppubtopic)
+    subs.publish_message(device, tostring(command.args.powerval), device.preferences.ppubtopic)
   end
 
 end
-
 
 local function handle_setnumeric(driver, device, command)
 
@@ -381,9 +359,9 @@ local function handle_setnumeric(driver, device, command)
       else
         sendmsg = tostring(command.args.numberval) .. ' ' .. device.state_cache.main[cap_unitfield.ID].unittext.value
       
-      end  
-      
-      publish_message(device, sendmsg)
+      end
+
+      subs.publish_message(device, sendmsg)
     end
   
   elseif command.command == 'setUnit' then
@@ -422,11 +400,10 @@ local function handle_shade(driver, device, command)
   end
   
   if device.preferences.publish then
-    publish_message(device, cmdmap[command.command].pubval)
+    subs.publish_message(device, cmdmap[command.command].pubval)
   end
 
 end
-
 
 local function handle_robot(driver, device, command)
 
@@ -438,12 +415,12 @@ local function handle_robot(driver, device, command)
     if command.args.mode == 'stop' then
       device:emit_event(capabilities.robotCleanerMovement.robotCleanerMovement('idle'))
       if device.preferences.publish then
-        publish_message(device, device.preferences.robotstop)
+        subs.publish_message(device, device.preferences.robotstop)
       end
     elseif command.args.mode == 'auto' then
       device:emit_event(capabilities.robotCleanerMovement.robotCleanerMovement('cleaning'))
       if device.preferences.publish then
-        publish_message(device, device.preferences.robotstart)
+        subs.publish_message(device, device.preferences.robotstart)
       end
     
     end
@@ -458,19 +435,19 @@ local function handle_robot(driver, device, command)
     if command.args.mode == 'idle' then
       device:emit_event(capabilities.robotCleanerCleaningMode.robotCleanerCleaningMode('manual'))
       if device.preferences.publish then
-        publish_message(device, device.preferences.robotpause)
+        subs.publish_message(device, device.preferences.robotpause)
       end
       
     elseif command.args.mode == 'cleaning' then
       device:emit_event(capabilities.robotCleanerCleaningMode.robotCleanerCleaningMode('auto'))
       if device.preferences.publish then
-        publish_message(device, device.preferences.robotstart)
+        subs.publish_message(device, device.preferences.robotstart)
       end
     
     elseif (command.args.mode == 'charging') or (command.args.mode == 'homing') then
       device:emit_event(capabilities.robotCleanerCleaningMode.robotCleanerCleaningMode('manual'))
       if device.preferences.publish then
-        publish_message(device, device.preferences.robothome)
+        subs.publish_message(device, device.preferences.robothome)
       end
     end
   end
@@ -479,6 +456,7 @@ end
 
 return  {
           handle_refresh = handle_refresh,
+          handle_device_status_refresh = handle_device_status_refresh,
           handle_createdevice = handle_createdevice,
           handle_switch = handle_switch,
           handle_button = handle_button,

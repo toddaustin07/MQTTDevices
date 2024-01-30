@@ -20,7 +20,6 @@
 
 local log = require "log"
 
-
 local function build_html(list)
 
   local html_list = ''
@@ -53,9 +52,7 @@ local function build_html(list)
   return (table.concat(html))
 end
 
-
 local function determine_devices(targettopic)
-
   local targetlist = {}
   local devicelist = thisDriver:get_devices()
 
@@ -72,22 +69,52 @@ local function determine_devices(targettopic)
     end
   end
   return targetlist
+end
+
+local function publish_message(device, payload, opt_topic, opt_qos)
+
+    if client and (client_reset_inprogress==false) and payload then
+
+        local pubtopic = opt_topic or device.preferences.pubtopic
+        local pubqos = opt_qos or device.preferences.qos:match('qos(%d)$')
+
+        assert(client:publish{
+            topic = pubtopic,
+            payload = payload,
+            qos = tonumber(pubqos)
+        })
+
+        log.debug (string.format('Message "%s" published to topic %s with qos=%d', payload, pubtopic, tonumber(pubqos)))
+
+    end
 
 end
 
+local function get_last_status_device(device)
+    if device.device_network_id:find('Master', 1, 'plaintext') then
+        log.info ('Unsupported Refresh action')
+    else
+        log.info('refresh normal device - request status refresh')
+        if (device.preferences.getter) then
+            log.info('device with getter enabled')
+            if (device.preferences.getterFormat == 'json') or (device.preferences.getterFormat == nil) then
+                log.info('getter json mode')
+                publish_message(device, tostring('{ "'.. device.preferences.getterJsonElement ..'":""}'), device.preferences.getterTopic)
+            else
+                log.info('unsupported refresh payload')
+            end
+        end
+    end
+end
 
 local function is_subscribed(qtopic)
-
   for _, topic in pairs(SUBSCRIBED_TOPICS) do
     if topic == qtopic then; return true; end
   end
   return false
-
 end
 
-
 local function unique_topic_list()
-
   local list = {}
   for _, topic in pairs(SUBSCRIBED_TOPICS) do
     local alreadyfound=false
@@ -102,42 +129,36 @@ local function unique_topic_list()
 
 end
 
-
 local function subscribe_topic(device)
-
   if is_subscribed(device.preferences.subTopic) then
     log.debug ('Already subscribed to topic', device.preferences.subTopic)
     SUBSCRIBED_TOPICS[device.id] = device.preferences.subTopic
     device:emit_event(cap_status.status('Subscribed'))
+    get_last_status_device(device)
   else
     SUBSCRIBED_TOPICS[device.id] = device.preferences.subTopic
     assert(client:subscribe{ topic=device.preferences.subTopic, qos=1, callback=function(suback)
-      log.info(string.format("Device <%s> subscribed to %s: %s", device.label, device.preferences.subTopic, suback))
-      
-      creator_device:emit_event(cap_topiclist.topiclist(build_html(unique_topic_list())))
-      device:emit_event(cap_status.status('Subscribed'))
-
+        log.info(string.format("Device <%s> subscribed to %s: %s", device.label, device.preferences.subTopic, suback))
+        creator_device:emit_event(cap_topiclist.topiclist(build_html(unique_topic_list())))
+        device:emit_event(cap_status.status('Subscribed'))
+        --handle request last status from device at mqttclient driver recreation
+        get_last_status_device(device)
     end})
   end
-
 end
 
-
 local function subscribe_all()
-
   local devicelist = thisDriver:get_devices()
   for _, device in ipairs(devicelist) do
-    if not device.device_network_id:find('Master', 1, 'plaintext') then
-      if (device.preferences.subTopic ~= 'xxxxx/xxxxx') and (device.preferences.subTopic ~= nil) then
-        subscribe_topic(device)
+      if not device.device_network_id:find('Master', 1, 'plaintext') then
+          if (device.preferences.subTopic ~= 'xxxxx/xxxxx') and (device.preferences.subTopic ~= nil) then
+              subscribe_topic(device)
+          end
       end
-    end
   end
 end
 
-
 local function unsubscribe(id, topic, delete_flag)
-
   local qty_check_val = 1                                 -- =1 if device changing subscription; =0 if device was deleted
   if delete_flag == true then; qty_check_val = 0; end
 
@@ -160,9 +181,7 @@ local function unsubscribe(id, topic, delete_flag)
   end
 end
 
-
 local function unsubscribe_all()
-
   local sublist = SUBSCRIBED_TOPICS
 
   for id, topic in pairs(sublist) do
@@ -171,9 +190,7 @@ local function unsubscribe_all()
 
 end
 
-
 local function get_subscribed_topic(device)
-
   for id, topic in pairs(SUBSCRIBED_TOPICS) do
     if id == device.id then
       return id, topic
@@ -181,11 +198,8 @@ local function get_subscribed_topic(device)
   end
 end
 
-
 local function mqtt_subscribe(device)
-
   if client then
-
     local id, topic = get_subscribed_topic(device)
 
     if topic then
@@ -197,13 +211,14 @@ local function mqtt_subscribe(device)
   end
 end
 
-
 return	{
           determine_devices = determine_devices,
           subscribe_topic = subscribe_topic,
           subscribe_all = subscribe_all,
           mqtt_subscribe = mqtt_subscribe,
           unsubscribe = unsubscribe,
-					unsubscribe_all = unsubscribe_all,
+          unsubscribe_all = unsubscribe_all,
           get_subscribed_topic = get_subscribed_topic,
-				}
+          get_last_status_device = get_last_status_device,
+          publish_message = publish_message
+}

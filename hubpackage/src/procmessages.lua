@@ -213,24 +213,25 @@ local function process_message(topic, msg)
           
         elseif dtype == 'Dimmer' then
           local numvalue = tonumber(value)
+          local valueSw = getJSONElement(device.preferences.swjsonelement, msg)
+
           if numvalue then
             log.debug ('Dimmer value received:', numvalue)
             if numvalue < 0 then; numvalue = 0; end
-            if numvalue > 100 then; numvalue = 100; end
             
             if device.preferences.dimmermax then
-              if numvalue > device.preferences.dimmermax then
-                numvalue = device.preferences.dimmermax
-              end
+              numvalue = math.floor(math.abs((numvalue / device.preferences.dimmermax) * 100))
             end
             
             device:emit_event(capabilities.switchLevel.level(numvalue))
-            
+
             if device:supports_capability_by_id('switch') then
-              if numvalue > 0 then
-                device:emit_event(capabilities.switch.switch('on'))
+              if valueSw == device.preferences.switchon then
+                device:emit_event(capabilities.switch.switch.on())
+              elseif valueSw == device.preferences.switchoff then
+                device:emit_event(capabilities.switch.switch.off())
               else
-                device:emit_event(capabilities.switch.switch('off'))
+                log.warn ('Unconfigured switch value received')
               end
             end
             

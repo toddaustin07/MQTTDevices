@@ -10,6 +10,8 @@ components:
         version: 1
       - id: partyvoice23922.refresh
         version: 1
+      - id: refresh
+        version: 1
     categories:
       - name: Switch
 metadata:
@@ -17,7 +19,7 @@ metadata:
 preferences:
   - title: "Max Dimmer Value"
     name: dimmermax
-    description: "Enter a number"
+    description: "Enter a number for percentage calculation"
     required: true
     preferenceType: integer
     definition:
@@ -124,3 +126,35 @@ preferences:
         qos1: "1"
         qos2: "2"
       default: qos1
+  - title: "Enable State Changes Request"
+    name: getter
+    description: "Enable/Disable"
+    required: true
+    preferenceType: boolean
+    definition:
+      default: false
+  - title: "Getter Topic"
+    name: getterTopic
+    description: "Topic Name"
+    required: false
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "xxxxx/xxxxx/get"
+  - title: "Getter Message Format"
+    name: getterFormat
+    description: "Select type"
+    required: true
+    preferenceType: enumeration
+    definition:
+      options:
+        json: "JSON"
+      default: json
+  - title: "Getter Message JSON Key"
+    name: getterJsonElement
+    description: "Data element"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "State"

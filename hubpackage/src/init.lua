@@ -22,7 +22,6 @@
 local capabilities = require "st.capabilities"
 local Driver = require "st.driver"
 local cosock = require "cosock"
-local socket = require "cosock.socket"          -- just for time
 local log = require "log"
 
 local procmsg = require "procmessages"
@@ -44,7 +43,7 @@ typemeta =  {
               ['Contact']      = { ['profile'] = 'mqttcontact.v2',       ['created'] = 0, ['switch'] = false },
               ['Motion']       = { ['profile'] = 'mqttmotion.v2',        ['created'] = 0, ['switch'] = false },
               ['Alarm']        = { ['profile'] = 'mqttalarm.v2',         ['created'] = 0, ['switch'] = false },
-              ['Dimmer']       = { ['profile'] = 'mqttdimmer.v3',        ['created'] = 0, ['switch'] = true },
+              ['Dimmer']       = { ['profile'] = 'mqttdimmer.v3t',        ['created'] = 0, ['switch'] = true },
               ['Acceleration'] = { ['profile'] = 'mqttaccel.v1',         ['created'] = 0, ['switch'] = false },
               ['Lock']         = { ['profile'] = 'mqttlock.v2',          ['created'] = 0, ['switch'] = false },
               ['Presence']     = { ['profile'] = 'mqttpresence.v1',      ['created'] = 0, ['switch'] = false },
@@ -211,6 +210,7 @@ function init_mqtt(device)
         if ok == false then
           log.warn ('MQTT run_sync returned: ', err)
           if shutdown_requested == true then
+            client_reset_inprogress = false
             device:emit_event(cap_status.status('Driver shutdown'))
             return
           end
@@ -227,6 +227,7 @@ function init_mqtt(device)
             break
           end
         else
+          client_reset_inprogress = false
           log.error ('Unexpected return from MQTT client:', ok, err)
         end
       end
@@ -239,6 +240,7 @@ function init_mqtt(device)
     
   elseif client == nil then
     log.error ('Create MQTT Client failed')
+    client_reset_inprogress = false
     thisDriver:call_with_delay(creator_device.preferences.reconndelay or 15, init_mqtt)
   end
 end
@@ -539,6 +541,9 @@ thisDriver = Driver("MQTT Devices", {
     },
     [cap_refresh.ID] = {
       [cap_refresh.commands.push.NAME] = cmd.handle_refresh,
+    },
+    [capabilities.refresh.ID] = {
+      [capabilities.refresh.commands.refresh.NAME] = cmd.handle_device_status_refresh,
     },
     [cap_tempset.ID] = {
       [cap_tempset.commands.setvTemp.NAME] = cmd.handle_tempset,
